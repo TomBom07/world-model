@@ -135,6 +135,53 @@ function renderStrategic(data) {
   $('boundary').textContent = data.scientific_boundary;
 }
 
+
+function renderSealed(data) {
+  const audit = data.audit;
+  const metrics = data.metrics;
+  const manifest = data.manifest;
+  const ranked = Object.entries(metrics).sort((a, b) => a[1].mae - b[1].mae);
+  const best = ranked[0];
+
+  $('sealed-metrics').innerHTML = [
+    metric('Leakage violations', audit.leakage_violations, audit.leakage_violations === 0 ? 'fail-closed audit passed' : 'invalid experiment'),
+    metric('Forecast seals', audit.all_forecast_seals_valid ? '100%' : 'FAIL', audit.evaluation_events + ' evaluation events'),
+    metric('Best frozen MAE', fmt(best[1].mae), pretty(best[0])),
+    metric('Evaluation events', audit.evaluation_events, audit.training_events + ' training events'),
+  ].join('');
+
+  $('seal-pill').textContent = audit.all_forecast_seals_valid && audit.leakage_violations === 0
+    ? 'verified'
+    : 'invalid';
+
+  $('manifest-hash').innerHTML = `
+    <span class="code-dim">experiment seal</span><br>
+    <strong>${manifest.seal.slice(0, 18)}…</strong><br>
+    <span class="code-dim">dataset ${manifest.dataset_hash.slice(0, 18)}…</span>
+  `;
+
+  $('seal-audit').innerHTML = [
+    ['train cutoff', String(audit.last_training_event)],
+    ['evaluation starts', String(audit.first_evaluation_event)],
+    ['feature leakage', audit.leakage_violations === 0 ? 'none detected' : String(audit.leakage_violations)],
+    ['forecast integrity', audit.all_forecast_seals_valid ? 'all seals verify' : 'seal failure'],
+  ].map(([label, value]) => `
+    <div class="suggestion"><span>${label}</span><code>${value}</code></div>
+  `).join('');
+
+  $('sealed-benchmark').innerHTML = ranked.map(([name, row], index) => `
+    <tr>
+      <td class="${index === 0 ? 'winner' : ''}">${pretty(name)}</td>
+      <td>${fmt(row.mae)}</td>
+      <td>${fmt(row.rmse)}</td>
+      <td>${pct(row.directional_accuracy, 1)}</td>
+      <td>${pct(row.interval_coverage_80, 1)}</td>
+    </tr>
+  `).join('');
+
+  $('sealed-boundary').textContent = data.scientific_boundary;
+}
+
 function renderV0(data) {
   const exp = data.experiment;
   const post = data.post_regime;
@@ -220,19 +267,23 @@ async function run() {
   try {
     const seed = $('seed').value || '7';
     const target = $('target').value;
-    const [strategicResponse, v0Response] = await Promise.all([
+    const [strategicResponse, sealedResponse, v0Response] = await Promise.all([
       fetch(`/api/strategic?${new URLSearchParams({ seed, observations: '260' })}`),
+      fetch(`/api/sealed?${new URLSearchParams({ seed, observations: '120' })}`),
       fetch(`/api/demo?${new URLSearchParams({ seed, target, observations: '360' })}`),
     ]);
 
     if (!strategicResponse.ok) throw new Error(`Strategic API HTTP ${strategicResponse.status}`);
+    if (!sealedResponse.ok) throw new Error(`Sealed API HTTP ${sealedResponse.status}`);
     if (!v0Response.ok) throw new Error(`Compiler API HTTP ${v0Response.status}`);
 
-    const [strategic, v0] = await Promise.all([
+    const [strategic, sealed, v0] = await Promise.all([
       strategicResponse.json(),
+      sealedResponse.json(),
       v0Response.json(),
     ]);
     renderStrategic(strategic);
+    renderSealed(sealed);
     renderV0(v0);
   } catch (err) {
     $('probe-copy').textContent = `Experiment failed: ${err.message}`;
