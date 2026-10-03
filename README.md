@@ -198,6 +198,29 @@ A passing doctor result means the controlled V3, cross-domain physics and V4 res
 
 See [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md).
 
+## Rook 0.6: bring your own world
+
+The browser now has a conversation-first **Your data** flow for numeric CSV files:
+
+1. choose or drag in a CSV;
+2. pick one numeric target and up to eight numeric features;
+3. keep the final 20% of complete rows untouched as a chronological holdout;
+4. standardize features from training statistics only;
+5. search compact symbolic terms (linear, pairwise interactions and squares);
+6. compare the symbolic model against mean and Ridge baselines;
+7. inspect permutation sensitivity, extrapolation and competing symbolic candidates;
+8. continue interrogating the result in the same Rook chat.
+
+European CSVs with semicolon delimiters and decimal commas are supported in the UI/parser path.
+
+This feature discovers **predictive structure**, not causality. A good holdout score inside one uploaded table is not proof that the equation is invariant under intervention, free of confounding, or prospectively valid in a new environment.
+
+The JSON API is also available at:
+
+```text
+POST /api/custom/analyze
+```
+
 ## Implemented
 
 
