@@ -24,7 +24,7 @@ from .ollama_client import OllamaUnavailable, chat as ollama_chat, status as oll
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.6.0",
+    version="0.7.0",
     description="Reflexive Mechanism Compilation, active identification, theory invention and sealed falsification.",
 )
 
@@ -232,7 +232,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v4", "version": "0.6.0"}
+    return {"status": "ok", "engine": "rmc-v4", "version": "0.7.0"}
 
 
 @app.get("/api/demo")
