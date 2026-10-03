@@ -10,7 +10,10 @@ from worldmodel.prospective import create_prospective_entry, score_prospective_e
 def test_frontier_suite_passes_default_seed():
     report = FrontierResearchEngine(seed=7).run()
     for name, passed in report["checks"].items():
-        assert passed, f"frontier check failed: {name}"
+        detail = ""
+        if name == "joint_ontology_and_law_discovery_is_predictive":
+            detail = f" | joint={report['joint_ontology_law']}"
+        assert passed, f"frontier check failed: {name}{detail}"
     assert report["all_checks_pass"]
 
 
