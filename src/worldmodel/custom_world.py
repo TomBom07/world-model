@@ -29,8 +29,16 @@ def _metric_bundle(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
 def _as_float(value: object) -> float | None:
     if value is None:
         return None
+    normalized = value
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        # Common European CSV format: semicolon-separated columns with decimal commas.
+        if "," in normalized and "." not in normalized:
+            normalized = normalized.replace(",", ".")
     try:
-        number = float(value)
+        number = float(normalized)
     except (TypeError, ValueError):
         return None
     return number if np.isfinite(number) else None
