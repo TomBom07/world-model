@@ -40,6 +40,18 @@ def main() -> None:
     physics.add_argument("--seed", type=int, default=7)
     physics.add_argument("--observations", type=int, default=240)
 
+    frontier = sub.add_parser(
+        "frontier",
+        help="run the V4 multi-domain theory-discovery and falsification suite",
+    )
+    frontier.add_argument("--seed", type=int, default=7)
+
+    doctor = sub.add_parser(
+        "doctor",
+        help="verify the V3/V4 discovery stack and cross-domain physics loop locally",
+    )
+    doctor.add_argument("--seed", type=int, default=7)
+
     fred = sub.add_parser(
         "fred-fed",
         help="download FRED series and build a real Fed target-change event CSV",
@@ -87,6 +99,44 @@ def main() -> None:
         from .physics_engine import PhysicsDiscoveryEngine
 
         result = PhysicsDiscoveryEngine(seed=args.seed).run_demo(n=args.observations)
+    elif args.command == "frontier":
+        from .frontier_engine import FrontierResearchEngine
+
+        result = FrontierResearchEngine(seed=args.seed).run()
+    elif args.command == "doctor":
+        from .breakthrough_engine import BreakthroughResearchEngine
+        from .frontier_engine import FrontierResearchEngine
+        from .physics_engine import PhysicsDiscoveryEngine
+
+        breakthrough_result = BreakthroughResearchEngine(seed=args.seed).run()
+        physics_result = PhysicsDiscoveryEngine(seed=args.seed).run_demo(n=240)
+        frontier_result = FrontierResearchEngine(seed=args.seed).run()
+        physics_benchmark = physics_result["identification_benchmark"]
+        checks = {
+            "v3_causal_renormalization": bool(
+                breakthrough_result["all_checks_pass"]
+            ),
+            "v4_frontier_suite": bool(frontier_result["all_checks_pass"]),
+            "physics_preregistration": bool(
+                physics_result["preregistration"]["verified"]
+            ),
+            "physics_hidden_law_identified": bool(
+                physics_result["active_identification"]["correct"]
+            ),
+            "active_probe_beats_random": bool(
+                physics_benchmark["active_true_posterior"]
+                > physics_benchmark["random_true_posterior"]
+            ),
+        }
+        result = {
+            "status": "ok" if all(checks.values()) else "failed",
+            "checks": checks,
+            "versions": {
+                "v3": breakthrough_result["version"],
+                "v4": frontier_result["version"],
+                "physics": "cross-domain-hidden-physics",
+            },
+        }
     elif args.command == "fred-fed":
         from datetime import date
 
@@ -161,6 +211,8 @@ def main() -> None:
             target=getattr(args, "target", "growth_equity"),
         )
     print(json.dumps(result, indent=2, default=str))
+    if args.command == "doctor" and result["status"] != "ok":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

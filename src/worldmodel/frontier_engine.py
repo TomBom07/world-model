@@ -80,9 +80,10 @@ class FrontierResearchEngine:
         }
 
         return {
+            **report,
+            "benchmark_version": report["version"],
             "version": "v4-frontier-suite",
             "seed": self.seed,
             "checks": checks,
             "all_checks_pass": all(checks.values()),
-            **report,
         }

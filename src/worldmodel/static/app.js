@@ -264,6 +264,56 @@ function renderPhysics(data) {
 }
 
 
+function renderFrontier(data) {
+  const checks = data.checks || {};
+  const entries = Object.entries(checks);
+  const passed = entries.filter(([, value]) => value).length;
+  const summary = data.cross_domain_summary;
+  const natural = data.natural_experiments;
+  const laws = data.latent_laws;
+  const invented = data.theory_invention?.invented;
+  const unknown = data.theory_invention?.open_world?.unknown_probability ?? 0;
+
+  $('frontier-metrics').innerHTML = [
+    metric('V4 checks', `${passed}/${entries.length}`, data.all_checks_pass ? 'all falsification gates pass' : 'one or more gates failed'),
+    metric('Min ontology uplift', pct(summary.minimum_improvement_over_pca, 1), 'vs PCA across all domains'),
+    metric('Natural-regime ARI', fmt(natural.adjusted_rand_index, 3), `${natural.cluster_count} recovered regimes`),
+    metric('Latent-law R²', fmt(laws.mean_validation_r2, 3), 'held-out symbolic dynamics'),
+  ].join('');
+
+  $('frontier-status').textContent = data.all_checks_pass ? 'all checks pass' : 'check failures';
+  $('frontier-status').className = `pill ${data.all_checks_pass ? 'safe' : 'flip'}`;
+
+  $('frontier-checks').innerHTML = entries.map(([name, ok]) => `
+    <div class="suggestion">
+      <span>${pretty(name)}</span>
+      <strong class="${ok ? 'safe' : 'flip'}">${ok ? 'PASS' : 'FAIL'}</strong>
+    </div>
+  `).join('');
+
+  $('frontier-theory-pill').textContent = invented?.accepted ? 'new theory accepted' : 'no theory accepted';
+  $('frontier-theory').innerHTML = invented
+    ? `<span class="code-dim">unknown hypothesis mass</span><br>
+       <strong>${pct(unknown, 1)}</strong><br>
+       <span class="code-dim">invented terms</span><br>
+       <strong>${invented.terms.join(' + ')}</strong><br>
+       <span class="code-dim">holdout improvement ${pct(invented.relative_improvement, 1)}</span>`
+    : '<span class="code-dim">No replacement theory was accepted.</span>';
+
+  $('frontier-domains').innerHTML = Object.entries(data.cross_domain_ontology).map(([name, row]) => `
+    <div class="mechanic-card">
+      <span class="mechanic-name">${pretty(name)}</span>
+      <strong>${row.selected_dim}D</strong>
+      <small>selected causal latent space</small>
+      <div class="micro-row"><span>recovery R²</span><b>${fmt(row.latent_recovery_r2, 3)}</b></div>
+      <div class="micro-row"><span>vs PCA</span><b>+${pct(row.improvement_over_pca, 1)}</b></div>
+    </div>
+  `).join('');
+
+  $('frontier-boundary').textContent = data.scientific_boundary;
+}
+
+
 function renderSealed(data) {
   const audit = data.audit;
   const metrics = data.metrics;
@@ -391,31 +441,36 @@ async function run() {
   button.textContent = 'Inferring worlds…';
   $('probe-copy').textContent = 'Simulating competing worlds and ranking diagnostic events…';
   $('physics-probe-copy').textContent = 'Searching for the most diagnostic physical intervention…';
+  $('frontier-status').textContent = 'running';
   $('program').textContent = 'Searching executable mechanisms…';
 
   try {
     const seed = $('seed').value || '7';
     const target = $('target').value;
-    const [strategicResponse, physicsResponse, sealedResponse, v0Response] = await Promise.all([
+    const [strategicResponse, physicsResponse, frontierResponse, sealedResponse, v0Response] = await Promise.all([
       fetch(`/api/strategic?${new URLSearchParams({ seed, observations: '260' })}`),
       fetch(`/api/physics?${new URLSearchParams({ seed, observations: '240' })}`),
+      fetch(`/api/frontier?${new URLSearchParams({ seed })}`),
       fetch(`/api/sealed?${new URLSearchParams({ seed, observations: '120' })}`),
       fetch(`/api/demo?${new URLSearchParams({ seed, target, observations: '360' })}`),
     ]);
 
     if (!strategicResponse.ok) throw new Error(`Strategic API HTTP ${strategicResponse.status}`);
     if (!physicsResponse.ok) throw new Error(`Physics API HTTP ${physicsResponse.status}`);
+    if (!frontierResponse.ok) throw new Error(`Frontier API HTTP ${frontierResponse.status}`);
     if (!sealedResponse.ok) throw new Error(`Sealed API HTTP ${sealedResponse.status}`);
     if (!v0Response.ok) throw new Error(`Compiler API HTTP ${v0Response.status}`);
 
-    const [strategic, physics, sealed, v0] = await Promise.all([
+    const [strategic, physics, frontier, sealed, v0] = await Promise.all([
       strategicResponse.json(),
       physicsResponse.json(),
+      frontierResponse.json(),
       sealedResponse.json(),
       v0Response.json(),
     ]);
     renderStrategic(strategic);
     renderPhysics(physics);
+    renderFrontier(frontier);
     renderSealed(sealed);
     renderV0(v0);
   } catch (err) {

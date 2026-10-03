@@ -10,13 +10,14 @@ from fastapi.staticfiles import StaticFiles
 from .engine import ResearchEngine
 from .historical_engine import HistoricalResearchEngine
 from .physics_engine import PhysicsDiscoveryEngine
+from .frontier_engine import FrontierResearchEngine
 from .strategic_engine import StrategicResearchEngine
 
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.3.0",
-    description="Reflexive Mechanism Compilation, active identification and sealed historical replay.",
+    version="0.5.0",
+    description="Reflexive Mechanism Compilation, active identification, theory invention and sealed falsification.",
 )
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -43,6 +44,11 @@ def _cached_physics(seed: int, observations: int):
     return PhysicsDiscoveryEngine(seed=seed).run_demo(n=observations)
 
 
+@lru_cache(maxsize=16)
+def _cached_frontier(seed: int):
+    return FrontierResearchEngine(seed=seed).run()
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -50,7 +56,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v2"}
+    return {"status": "ok", "engine": "rmc-v4", "version": "0.5.0"}
 
 
 @app.get("/api/demo")
@@ -87,3 +93,8 @@ def physics(
     observations: int = Query(240, ge=180, le=600),
 ):
     return _cached_physics(seed, observations)
+
+
+@app.get("/api/frontier")
+def frontier(seed: int = Query(7, ge=0, le=1_000_000)):
+    return _cached_frontier(seed)
