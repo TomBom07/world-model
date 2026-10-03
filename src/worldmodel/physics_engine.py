@@ -11,6 +11,7 @@ from .experiment_design import (
     gaussian_posterior,
 )
 from .physics import MECHANISMS, HiddenPhysicsSimulator, PhysicsProbe
+from .sealing import sha256_payload
 
 
 class PhysicsDiscoveryEngine:
@@ -149,6 +150,17 @@ class PhysicsDiscoveryEngine:
         selected = by_name[selected_score.name]
         selected_probe = probes[selected.name]
 
+        preregistration_payload = {
+            "seed": self.seed,
+            "event_index": event_index,
+            "probe": asdict(selected_probe),
+            "predictions": {
+                name: values.tolist()
+                for name, values in selected.predictions.items()
+            },
+        }
+        preregistration_seal = sha256_payload(preregistration_payload)
+
         true_mechanism = MECHANISMS[self.seed % len(MECHANISMS)]
         observation, posterior = self._observe(
             selected,
@@ -191,6 +203,14 @@ class PhysicsDiscoveryEngine:
                     "The two resistance laws have the same value and first derivative "
                     "at the reference velocity, making passive operation locally "
                     "indistinguishable to first order."
+                ),
+            },
+            "preregistration": {
+                "seal": preregistration_seal,
+                "verified": sha256_payload(preregistration_payload) == preregistration_seal,
+                "meaning": (
+                    "The selected probe and both candidate reaction fingerprints are "
+                    "hashed before the synthetic observation is generated."
                 ),
             },
             "active_identification": {
