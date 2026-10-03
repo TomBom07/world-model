@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol, Sequence
+import warnings
 
 import numpy as np
 from sklearn.base import clone
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neural_network import MLPRegressor
@@ -156,7 +158,13 @@ class SklearnFingerprintModel:
         if y.ndim == 1:
             y = y[:, None]
         self.estimator = clone(self._template)
-        self.estimator.fit(x, y)
+        # The MLP is only a comparison baseline. On small synthetic replay samples
+        # sklearn can hit the LBFGS iteration ceiling even when its fitted predictions
+        # are perfectly usable for the benchmark. Keep the console focused on Rook's
+        # own failures while preserving the baseline result itself.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            self.estimator.fit(x, y)
         prediction = np.asarray(self.estimator.predict(x), dtype=float)
         if prediction.ndim == 1:
             prediction = prediction[:, None]
