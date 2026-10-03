@@ -120,10 +120,38 @@ Run it with:
 
 ```bash
 worldmodel breakthrough --seed 7
+worldmodel frontier --seed 7
 ```
 
 This is an alpha research result, not a claim that general causal ontology discovery
 has been solved. See [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md).
+
+## V4: frontier discovery suite
+
+V4 turns the remaining roadmap into one executable falsification suite:
+
+- nonlinear intervention-aware ontology discovery
+- automatic latent-dimension selection from permutation-null tests
+- joint ontology + controlled-law discovery
+- open-world rejection followed by symbolic theory invention
+- unlabeled natural-experiment discovery
+- ontology split / merge proposals
+- performative-feedback-aware experiment selection
+- prospective preregistration and scoring
+- a unified Falsifiable Causal Compression objective
+- cross-domain tests in physics-like, ecology-like and epidemic-like worlds
+
+Run:
+
+```bash
+worldmodel frontier --seed 7
+```
+
+CI runs this suite across multiple seeds and the command exits non-zero when a
+frontier check fails. Passing V4 is still controlled evidence, not proof that the
+system has discovered a new real-world law.
+
+See [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md).
 
 ## Implemented
 
@@ -232,6 +260,6 @@ V0 and V1 use **synthetic worlds whose hidden mechanisms are known to the evalua
 
 The project does **not** claim real-market alpha. No output is investment advice or a trading signal.
 
-The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
+The sealed historical protocol is implemented. V4 also adds prospective claim sealing. The remaining evidence threshold is external: freeze the architecture, preregister a real intervention or natural experiment before its outcome, then test whether an invented mechanism survives that new evidence and replicates without retuning.
 
-See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
+See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
