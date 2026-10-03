@@ -28,7 +28,12 @@ class LatentLawResult:
 
 
 class LatentLawCompiler:
-    """Compile executable transition laws in a learned latent state space."""
+    """Compile executable transition laws in a learned latent state space.
+
+    Optional control variables are treated as observed interventions that can drive
+    the state transition. This matters for scientific systems where the state law is
+    not autonomous because an experimenter or environment is actively perturbing it.
+    """
 
     def __init__(
         self,
@@ -45,6 +50,7 @@ class LatentLawCompiler:
         self,
         z: np.ndarray,
         *,
+        controls: np.ndarray | None = None,
         train_fraction: float = 0.7,
     ) -> LatentLawResult:
         z = np.asarray(z, dtype=float)
@@ -53,11 +59,31 @@ class LatentLawCompiler:
         if not 0.5 <= train_fraction < 0.9:
             raise ValueError("train_fraction must be in [0.5, 0.9)")
 
-        x = z[:-1]
+        state = z[:-1]
         delta = z[1:] - z[:-1]
+        state_names = [f"z{i}" for i in range(z.shape[1])]
+
+        if controls is not None:
+            controls = np.asarray(controls, dtype=float)
+            if controls.ndim == 1:
+                controls = controls[:, None]
+            if controls.ndim != 2:
+                raise ValueError("controls must be a 2D array")
+            if len(controls) == len(z):
+                transition_controls = controls[:-1]
+            elif len(controls) == len(z) - 1:
+                transition_controls = controls
+            else:
+                raise ValueError("controls must have len(z) or len(z)-1 rows")
+            x = np.column_stack([state, transition_controls])
+            control_names = [f"u{i}" for i in range(transition_controls.shape[1])]
+            names = state_names + control_names
+        else:
+            x = state
+            names = state_names
+
         split = max(24, int(len(x) * train_fraction))
         split = min(split, len(x) - 8)
-        names = [f"z{i}" for i in range(z.shape[1])]
         compiler = MechanismCompiler(
             max_terms=self.max_terms,
             beam_width=self.beam_width,
@@ -67,7 +93,7 @@ class LatentLawCompiler:
         )
 
         laws: list[LatentLaw] = []
-        for target_index, target_name in enumerate(names):
+        for target_index, target_name in enumerate(state_names):
             result = compiler.fit(
                 x[:split],
                 delta[:split, target_index],
@@ -110,10 +136,10 @@ class JointDiscoveryResult:
 class JointOntologyLawLearner:
     """Select ontology size using both intervention alignment and law simplicity.
 
-    Candidate latent dimensions are scored by a small falsifiable objective:
+    Candidate latent dimensions are scored by a compact falsifiable objective:
     held-out transition error + description-length pressure - intervention signal.
-    This is the first place in WorldModel where the representation and the executable
-    dynamics are selected together rather than as independent stages.
+    This couples state representation and executable dynamics instead of selecting
+    them as unrelated stages.
     """
 
     def __init__(
@@ -134,13 +160,16 @@ class JointOntologyLawLearner:
         x: np.ndarray,
         interventions: np.ndarray,
     ) -> JointDiscoveryResult:
+        interventions = np.asarray(interventions, dtype=float)
+        if interventions.ndim == 1:
+            interventions = interventions[:, None]
         ontology = self.ontology_learner.fit(x, interventions)
         max_dim = min(ontology.max_dim, max(1, interventions.shape[1]))
         candidates: list[tuple[int, float, LatentLawResult]] = []
 
         for k in range(1, max_dim + 1):
             z = ontology.transform(x, n_components=k)
-            law = self.law_compiler.fit(z)
+            law = self.law_compiler.fit(z, controls=interventions)
             signal = float(np.sum(ontology.canonical_correlations[:k] ** 2))
             objective = (
                 np.log(max(law.mean_validation_mse, 1e-12))
