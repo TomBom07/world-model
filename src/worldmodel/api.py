@@ -20,6 +20,7 @@ from .strategic_engine import StrategicResearchEngine
 from .strategic import ASSETS, EVENTS, MECHANISMS, StrategicMarketSimulator
 from .custom_world import analyze_custom_world
 from .ollama_client import OllamaUnavailable, chat as ollama_chat, status as ollama_status
+from .world_api import router as world_router
 
 
 app = FastAPI(
@@ -30,6 +31,7 @@ app = FastAPI(
 
 STATIC_DIR = Path(__file__).with_name("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.include_router(world_router)
 
 
 class CustomWorldRequest(BaseModel):
@@ -228,6 +230,11 @@ def _ai_evidence(
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/worlds")
+def worlds_workspace() -> FileResponse:
+    return FileResponse(STATIC_DIR / "worlds.html")
 
 
 @app.get("/api/health")
