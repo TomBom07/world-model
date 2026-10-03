@@ -22,7 +22,10 @@
       </div>
 
       <nav class="nav" aria-label="Workspace">
-        <button class="nav-item active" data-view="home">
+        <button class="nav-item active" data-view="copilot">
+          <span class="nav-icon">✦</span><span>Ask Rook</span>
+        </button>
+        <button class="nav-item" data-view="home">
           <span class="nav-icon">⌂</span><span>Overview</span>
         </button>
         <button class="nav-item" data-view="market">
@@ -58,8 +61,8 @@
     <div class="workspace">
       <header class="workspace-topbar">
         <div>
-          <p class="breadcrumb">WORLD LAB / <span id="view-label">OVERVIEW</span></p>
-          <h1 id="page-title">Understand the world, not just the output.</h1>
+          <p class="breadcrumb">WORLD LAB / <span id="view-label">ASK ROOK</span></p>
+          <h1 id="page-title">Reason with the world model.</h1>
         </div>
         <div class="run-controls">
           <label class="compact-field">
@@ -84,7 +87,128 @@
       </header>
 
       <main class="content">
-        <section class="view active" id="view-home">
+        <section class="view active" id="view-copilot">
+          <div class="copilot-shell">
+            <section class="copilot-main">
+              <div class="copilot-intro">
+                <div class="badge-row">
+                  <span class="badge soft">Rook copilot</span>
+                  <span class="badge status-badge" id="copilot-status">Loading world state…</span>
+                </div>
+                <h2>Ask the model what it thinks is true.</h2>
+                <p>
+                  Rook answers from the current experiment state: competing mechanisms,
+                  posterior beliefs, proposed falsification tests, invented theories, and sealed evidence.
+                </p>
+              </div>
+
+              <div class="suggestion-chips" id="question-chips">
+                <button data-question="What do you currently think is driving the market?">What is driving the market?</button>
+                <button data-question="Why do you believe that?">Why?</button>
+                <button data-question="What would change your mind?">What would change your mind?</button>
+                <button data-question="What did you discover that you were not given?">What did you discover?</button>
+                <button data-question="How do I know you are not cheating?">How do I know you didn't cheat?</button>
+              </div>
+
+              <div class="conversation" id="conversation" aria-live="polite">
+                <div class="message rook-message">
+                  <div class="message-avatar">R</div>
+                  <div class="message-body">
+                    <span class="message-role">Rook</span>
+                    <p>I’m loading the current research world. Once ready, ask me what I believe, why, what would falsify it, or explore a counterfactual on the right.</p>
+                  </div>
+                </div>
+              </div>
+
+              <form class="ask-box" id="ask-form">
+                <textarea id="ask-input" rows="1" placeholder="Ask Rook about the current world…" aria-label="Ask Rook"></textarea>
+                <div class="ask-footer">
+                  <span>Answers are grounded in this local experiment run.</span>
+                  <button class="ask-submit" type="submit" aria-label="Send question">↑</button>
+                </div>
+              </form>
+            </section>
+
+            <aside class="copilot-side">
+              <section class="world-card">
+                <div class="side-head">
+                  <div>
+                    <span class="step-tag">CURRENT WORLD</span>
+                    <h3>Competing explanations</h3>
+                  </div>
+                  <span class="mini-pill green" id="copilot-confidence">—</span>
+                </div>
+
+                <div class="theory-map">
+                  <div class="theory-node" id="copilot-theory-a">
+                    <span>World A</span>
+                    <strong>Belief reflexive</strong>
+                    <small id="copilot-theory-a-p">—</small>
+                  </div>
+                  <div class="theory-connector">
+                    <span>evidence</span>
+                    <i></i>
+                  </div>
+                  <div class="theory-node" id="copilot-theory-b">
+                    <span>World B</span>
+                    <strong>Liquidity reflexive</strong>
+                    <small id="copilot-theory-b-p">—</small>
+                  </div>
+                </div>
+
+                <div class="current-test">
+                  <span class="field-label">Best next discriminator</span>
+                  <strong id="copilot-best-test">—</strong>
+                  <small id="copilot-best-test-sub">Finding the highest-information event…</small>
+                </div>
+              </section>
+
+              <section class="world-card scenario-lab">
+                <div class="side-head">
+                  <div>
+                    <span class="step-tag">WHAT-IF LAB</span>
+                    <h3>Stress both worlds</h3>
+                  </div>
+                  <span class="mini-pill" id="scenario-info">—</span>
+                </div>
+                <p class="side-copy">
+                  Choose a hypothetical naturally occurring event. Rook recomputes how each candidate world says the assets should react.
+                </p>
+
+                <div class="scenario-controls">
+                  <label>
+                    <span>Event</span>
+                    <select id="scenario-event">
+                      <option value="growth">Growth</option>
+                      <option value="inflation">Inflation</option>
+                      <option value="liquidity" selected>Liquidity</option>
+                      <option value="policy">Policy</option>
+                      <option value="sentiment">Sentiment</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Shock</span>
+                    <div class="range-row">
+                      <input id="scenario-magnitude" type="range" min="-4" max="4" step="0.5" value="-2" />
+                      <output id="scenario-magnitude-label">-2.0σ</output>
+                    </div>
+                  </label>
+                  <button class="secondary-button" id="run-scenario" type="button">Run counterfactual</button>
+                </div>
+
+                <div class="scenario-result" id="scenario-result">
+                  <div class="scenario-placeholder">Run a counterfactual to compare reaction fingerprints.</div>
+                </div>
+              </section>
+
+              <div class="side-boundary">
+                Controlled synthetic world. Counterfactuals are research diagnostics, not trading signals.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-home">
           <div class="hero-card">
             <div class="hero-copy">
               <div class="badge-row">
