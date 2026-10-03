@@ -40,7 +40,6 @@ class ResidualTheoryInventor:
             top_k=top_k,
             interactions=True,
             squares=True,
-            absolute=True,
         )
         self.min_relative_improvement = float(min_relative_improvement)
 
