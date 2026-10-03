@@ -33,6 +33,13 @@ def main() -> None:
     )
     breakthrough.add_argument("--seed", type=int, default=7)
 
+    physics = sub.add_parser(
+        "physics",
+        help="run the cross-domain hidden-physics identification experiment",
+    )
+    physics.add_argument("--seed", type=int, default=7)
+    physics.add_argument("--observations", type=int, default=240)
+
     fred = sub.add_parser(
         "fred-fed",
         help="download FRED series and build a real Fed target-change event CSV",
@@ -76,6 +83,10 @@ def main() -> None:
         from .breakthrough_engine import BreakthroughResearchEngine
 
         result = BreakthroughResearchEngine(seed=args.seed).run()
+    elif args.command == "physics":
+        from .physics_engine import PhysicsDiscoveryEngine
+
+        result = PhysicsDiscoveryEngine(seed=args.seed).run_demo(n=args.observations)
     elif args.command == "fred-fed":
         from datetime import date
 
