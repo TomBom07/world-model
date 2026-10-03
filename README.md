@@ -1,8 +1,56 @@
-# WorldModel — Reflexive Mechanism Compiler
+# WorldModel
 
-> Infer the smallest executable mechanism that explains how a changing world updates itself — then actively seek the observation that can disprove it.
+> **Discover what kind of world you're actually in.**
 
-WorldModel is a research lab, not a stock-prediction bot. The project asks whether a machine can recover hidden mechanisms in a reflexive world, notice when its explanation breaks, model beliefs about beliefs, and choose the next observation that is most informative.
+WorldModel is an experimental theory-building machine. Instead of only predicting what happens next, it builds competing **executable explanations** of the world, finds the observation that would make those explanations disagree most, and uses the result to kill the wrong theory.
+
+```text
+observe
+  ↓
+build competing worlds
+  ↓
+find where they disagree
+  ↓
+choose the most informative observation
+  ↓
+falsify / update
+  ↓
+repeat
+```
+
+### The 30-second demo
+
+Two hidden worlds generate almost the **same visible history**.
+
+One is driven mainly by beliefs about other participants. The other is driven mainly by liquidity, leverage and forced deleveraging. A normal forecaster can fit both histories without knowing which explanation is true.
+
+WorldModel must do something harder:
+
+1. keep multiple explanations alive;
+2. simulate how each would react to possible future events;
+3. choose the event whose reactions differ most;
+4. observe the reaction;
+5. update its belief about which hidden mechanism generated the world.
+
+That loop is the product: **observe → compete → falsify → update**.
+
+### Why this is different from an ordinary world model
+
+Most world models optimize:
+
+```text
+world_t → world_t+1
+```
+
+WorldModel's long-term target is:
+
+```text
+(model_t, world_t) → (model_t+1, world_t+1)
+```
+
+The system is allowed to change not only its prediction, but its explanation of how the world works.
+
+> WorldModel is a research project, not a stock-prediction bot. Synthetic worlds are used where the hidden truth is known so mechanism recovery can be scored directly.
 
 ## V1: strategic hidden worlds
 
