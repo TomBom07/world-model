@@ -1317,3 +1317,117 @@ dialog::backdrop {
 .answer-action:active {
   transform: scale(.985);
 }
+
+
+/* Custom world upload */
+.csv-drop {
+  min-height: 150px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: rgba(255,255,255,.015);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 22px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.csv-drop:hover,
+.csv-drop.dragging {
+  border-color: rgba(255,255,255,.24);
+  background: rgba(255,255,255,.035);
+}
+
+.csv-drop.dragging { transform: scale(.995); }
+
+.csv-drop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.csv-drop-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.055);
+  display: grid;
+  place-items: center;
+  color: #d8dbe1;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.csv-drop strong {
+  color: #eceef1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.csv-drop small {
+  max-width: 270px;
+  color: var(--muted-2);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.custom-config {
+  margin-top: 18px;
+  display: grid;
+  gap: 2px;
+}
+
+.feature-list {
+  max-height: 230px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0e1014;
+  padding: 5px;
+}
+
+.feature-option {
+  min-height: 34px;
+  border-radius: 7px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #cfd3d9;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.feature-option:hover { background: rgba(255,255,255,.035); }
+
+.feature-option input {
+  accent-color: #ecece8;
+}
+
+.holdout-note {
+  margin: 3px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  padding: 11px 12px;
+}
+
+.holdout-note strong {
+  display: block;
+  color: #dfe1e5;
+  font-size: 9px;
+}
+
+.holdout-note span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-2);
+  font-size: 8px;
+  line-height: 1.45;
+}
