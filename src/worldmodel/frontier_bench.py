@@ -9,9 +9,13 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import adjusted_rand_score, r2_score
 
 from .experiment_design import ExperimentCandidate
-from .law_discovery import LatentLawCompiler
+from .law_discovery import JointOntologyLawLearner, LatentLawCompiler
 from .natural_experiments import NaturalEnvironmentDiscoverer
 from .nonlinear_ontology import InterventionAwareOntologyLearner
+from .objective import (
+    FalsifiableCausalCompressionObjective,
+    ScientificObjectiveTerms,
+)
 from .ontology_evolution import OntologyEvolutionDetector
 from .open_world import OpenWorldBayes
 from .performative import compare_naive_and_feedback_aware_selection
@@ -158,6 +162,57 @@ def _henon_trajectory(*, seed: int, n: int = 420) -> np.ndarray:
     return z
 
 
+def _controlled_joint_problem(
+    *,
+    seed: int,
+    n: int = 420,
+    observed_dim: int = 8,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(seed)
+    prototypes = np.array(
+        [
+            [-1.0, -0.8],
+            [1.0, -0.8],
+            [1.0, 0.9],
+            [-1.0, 0.9],
+        ],
+        dtype=float,
+    )
+    controls = np.zeros((n, 2), dtype=float)
+    block = 42
+    for t in range(n):
+        controls[t] = prototypes[(t // block) % len(prototypes)]
+
+    z = np.zeros((n, 2), dtype=float)
+    z[0] = np.array([0.15, -0.10])
+    for t in range(n - 1):
+        a, b = z[t]
+        u0, u1 = controls[t]
+        z[t + 1, 0] = (
+            0.66 * a
+            + 0.11 * b
+            + 0.23 * u0
+            + 0.055 * a * b
+        )
+        z[t + 1, 1] = (
+            -0.09 * a
+            + 0.69 * b
+            + 0.21 * u1
+            - 0.045 * a * a
+        )
+        z[t + 1] += rng.normal(0.0, 0.008, size=2)
+
+    mixing = rng.normal(size=(2, observed_dim))
+    nuisance = rng.normal(size=observed_dim)
+    nuisance /= np.linalg.norm(nuisance)
+    x = (
+        z @ mixing
+        + rng.normal(0.0, 0.10, size=(n, observed_dim))
+        + rng.normal(0.0, 0.25, size=(n, 1)) * nuisance
+    )
+    return x, z, controls
+
+
 def _theory_invention_benchmark(seed: int) -> dict[str, object]:
     rng = np.random.default_rng(seed)
     x = rng.normal(size=(360, 3))
@@ -284,6 +339,43 @@ def _prospective_benchmark() -> dict[str, object]:
     }
 
 
+def _objective_benchmark() -> dict[str, object]:
+    objective = FalsifiableCausalCompressionObjective()
+    compact_falsifiable = objective.score(
+        ScientificObjectiveTerms(
+            prediction_error=0.05,
+            description_length=6.0,
+            invariance_penalty=0.08,
+            calibration_penalty=0.05,
+            posterior_entropy=0.12,
+            expected_information_gain=0.55,
+            experiment_cost=0.08,
+            performative_feedback=0.04,
+            unknown_mass=0.04,
+        )
+    )
+    brittle_fit = objective.score(
+        ScientificObjectiveTerms(
+            prediction_error=0.18,
+            description_length=3.0,
+            invariance_penalty=0.75,
+            calibration_penalty=0.45,
+            posterior_entropy=0.60,
+            expected_information_gain=0.08,
+            experiment_cost=0.04,
+            performative_feedback=0.55,
+            unknown_mass=0.70,
+        )
+    )
+    return {
+        "compact_falsifiable_score": compact_falsifiable.total,
+        "brittle_fit_score": brittle_fit.total,
+        "prefers_compact_falsifiable": (
+            compact_falsifiable.total < brittle_fit.total
+        ),
+    }
+
+
 def run_frontier_benchmark(seed: int = 7) -> dict[str, object]:
     domains: dict[str, dict[str, object]] = {}
     for offset, domain in enumerate(("physics", "ecology", "epidemic")):
@@ -302,9 +394,8 @@ def run_frontier_benchmark(seed: int = 7) -> dict[str, object]:
         learned = result.transform(x)
         learned_r2 = _latent_recovery_score(learned, truth)
 
-        pca_dim = min(2, x.shape[1])
         pca_coords = PCA(
-            n_components=pca_dim,
+            n_components=2,
             random_state=seed,
         ).fit_transform(x)
         pca_r2 = _latent_recovery_score(pca_coords, truth)
@@ -332,10 +423,29 @@ def run_frontier_benchmark(seed: int = 7) -> dict[str, object]:
         top_k=12,
     ).fit(_henon_trajectory(seed=seed + 99))
 
+    joint_x, _, joint_controls = _controlled_joint_problem(seed=seed + 101)
+    joint = JointOntologyLawLearner(
+        ontology_learner=InterventionAwareOntologyLearner(
+            feature_count=48,
+            bandwidth=1.5,
+            ridge=0.05,
+            permutations=6,
+            seed=seed + 101,
+        ),
+        law_compiler=LatentLawCompiler(
+            max_terms=4,
+            beam_width=40,
+            top_k=12,
+        ),
+        complexity_weight=0.01,
+        intervention_weight=0.10,
+    ).fit(joint_x, joint_controls)
+
     invention = _theory_invention_benchmark(seed + 123)
     evolution = _ontology_evolution_benchmark(seed + 211)
     performative = _performative_benchmark(seed + 307)
     prospective = _prospective_benchmark()
+    objective = _objective_benchmark()
 
     improvements = [
         float(result["improvement_over_pca"])
@@ -365,10 +475,19 @@ def run_frontier_benchmark(seed: int = 7) -> dict[str, object]:
             "total_complexity": latent_laws.total_complexity,
             "laws": [asdict(item) for item in latent_laws.laws],
         },
+        "joint_ontology_law": {
+            "selected_dim": joint.selected_dim,
+            "objective": joint.objective,
+            "candidate_objectives": list(joint.candidate_objectives),
+            "mean_validation_r2": joint.law_result.mean_validation_r2,
+            "total_complexity": joint.law_result.total_complexity,
+            "laws": [asdict(item) for item in joint.law_result.laws],
+        },
         "theory_invention": invention,
         "ontology_evolution": evolution,
         "performative_selection": performative,
         "prospective_falsification": prospective,
+        "unified_objective": objective,
         "scientific_boundary": (
             "This suite demonstrates cross-domain controlled mechanism-discovery "
             "capabilities. It does not establish discovery of previously unknown "
