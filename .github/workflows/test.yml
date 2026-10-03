@@ -17,3 +17,9 @@ jobs:
       - run: node --check src/worldmodel/static/app.js
       - run: pytest
       - run: worldmodel doctor --seed 7
+      - name: V4 frontier robustness seeds
+        run: |
+          for seed in 3 19; do
+            worldmodel frontier --seed "$seed" > "frontier-$seed.json"
+            python -m json.tool "frontier-$seed.json" > /dev/null
+          done
