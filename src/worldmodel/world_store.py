@@ -436,6 +436,19 @@ class WorldStore:
         if quantity <= 0 or entry_price <= 0:
             raise ValueError("Paper trade quantity and price must be positive.")
         notional = float(quantity) * float(entry_price)
+        max_single_trade = float(account["initial_cash"]) * 0.25
+        if notional > max_single_trade:
+            raise ValueError("Paper trade notional cannot exceed 25% of initial paper capital.")
+
+        with self._connect() as db:
+            open_rows = db.execute(
+                "SELECT quantity, entry_price FROM paper_trades WHERE project_id=? AND status='open'",
+                (project_id,),
+            ).fetchall()
+        open_gross = sum(float(row["quantity"]) * float(row["entry_price"]) for row in open_rows)
+        if open_gross + notional > float(account["initial_cash"]):
+            raise ValueError("Open paper gross exposure cannot exceed 100% of initial paper capital.")
+
         signed_cash = -notional if normalized_side == "buy" else notional
         if normalized_side == "buy" and notional > float(account["cash"]):
             raise ValueError("Paper account has insufficient cash for this trade.")
