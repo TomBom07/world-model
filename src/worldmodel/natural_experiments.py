@@ -20,10 +20,12 @@ class NaturalExperimentResult:
 class NaturalEnvironmentDiscoverer:
     """Infer intervention-like environments from distributional shifts.
 
-    The time series is summarized in contiguous blocks. Candidate environment counts
-    are compared with silhouette score, and the best clustering is expanded back to
-    per-observation labels. This is intentionally a discovery heuristic: inferred
-    environments are hypotheses about natural experiments, not guaranteed causes.
+    Contiguous windows are summarized and clustered into candidate environments.
+    Mean shifts are the default signal because short-window variance estimates are
+    noisy enough to create spurious extra regimes. Scale changes can be included
+    explicitly when they are scientifically motivated.
+
+    The inferred labels are hypotheses about natural experiments, not causal truth.
     """
 
     def __init__(
@@ -31,13 +33,21 @@ class NaturalEnvironmentDiscoverer:
         *,
         window: int = 24,
         max_regimes: int = 6,
+        include_scale: bool = False,
         seed: int = 7,
     ) -> None:
         if window < 4 or max_regimes < 2:
             raise ValueError("window must be >=4 and max_regimes >=2")
         self.window = int(window)
         self.max_regimes = int(max_regimes)
+        self.include_scale = bool(include_scale)
         self.seed = int(seed)
+
+    def _summary(self, block: np.ndarray) -> np.ndarray:
+        mean = block.mean(axis=0)
+        if not self.include_scale:
+            return mean
+        return np.r_[mean, block.std(axis=0)]
 
     def fit_transform(self, x: np.ndarray) -> NaturalExperimentResult:
         x = np.asarray(x, dtype=float)
@@ -52,12 +62,11 @@ class NaturalEnvironmentDiscoverer:
                 if chunks:
                     prev_start, _ = chunks[-1]
                     chunks[-1] = (prev_start, end)
-                    block = x[prev_start:end]
-                    summaries[-1] = np.r_[block.mean(axis=0), block.std(axis=0)]
+                    summaries[-1] = self._summary(x[prev_start:end])
                 break
             block = x[start:end]
             chunks.append((start, end))
-            summaries.append(np.r_[block.mean(axis=0), block.std(axis=0)])
+            summaries.append(self._summary(block))
 
         summary = StandardScaler().fit_transform(np.vstack(summaries))
         if len(summary) < 4:
