@@ -16,3 +16,10 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest
       - run: worldmodel breakthrough --seed 7
+      - run: worldmodel physics --seed 7
+      - name: V4 frontier multi-seed falsification
+        run: |
+          for seed in 3 7 19; do
+            worldmodel frontier --seed "$seed" > "frontier-$seed.json"
+            python -m json.tool "frontier-$seed.json" > /dev/null
+          done
