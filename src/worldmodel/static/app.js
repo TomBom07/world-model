@@ -65,6 +65,21 @@ const CONTEXTS = {
       ['What does this still not prove?', 'See the scientific boundary of a historical replay.'],
     ],
   },
+  custom: {
+    name: 'Your data',
+    kicker: 'YOUR DATA',
+    title: 'Bring your own world.',
+    copy: 'Upload a numeric CSV, choose what you want to explain, and Rook will search for a compact relationship while keeping the final rows untouched for holdout evaluation.',
+    placeholder: 'Ask Rook about your uploaded data…',
+    boundary: 'Uploaded observational data · predictive structure is not automatically causal',
+    quick: 'Analyze data',
+    starters: [
+      ['Upload a CSV', 'Choose a numeric table and the target you want Rook to explain.'],
+      ['What will Rook do with my data?', 'See the train/holdout protocol before uploading anything.'],
+      ['What kind of CSV works best?', 'Learn the minimum requirements and current limits.'],
+      ['What does Rook refuse to claim?', 'Understand the causality and extrapolation boundary.'],
+    ],
+  },
 };
 
 const STORAGE_KEY = 'rook.threads.v2';
@@ -78,6 +93,9 @@ const state = {
   v0: null,
   health: null,
   scenario: null,
+  customData: null,
+  customFileName: null,
+  customUpload: null,
   loading: false,
   threads: [],
   activeThreadId: null,
@@ -128,6 +146,8 @@ function createThread(context = state.context) {
     title: 'New chat',
     createdAt: Date.now(),
     messages: [],
+    customAnalysis: context === 'custom' ? state.customData : null,
+    customFileName: context === 'custom' ? state.customFileName : null,
   };
   state.threads.unshift(thread);
   state.activeThreadId = thread.id;
@@ -194,8 +214,8 @@ function renderContext() {
     button.classList.toggle('active', button.dataset.context === state.context);
   });
 
-  $('starter-grid').innerHTML = context.starters.map(([title, description]) => `
-    <button class="starter-card" data-starter="${escapeHTML(title)}">
+  $('starter-grid').innerHTML = context.starters.map(([title, description], index) => `
+    <button class="starter-card" data-starter="${escapeHTML(title)}" ${state.context === 'custom' && index === 0 ? 'data-open-custom="true"' : ''}>
       <strong>${escapeHTML(title)}</strong>
       <small>${escapeHTML(description)}</small>
     </button>
@@ -647,11 +667,137 @@ function genericAnswer(context) {
   `;
 }
 
+function answerCustom(q) {
+  const data = state.customData;
+
+  if (!data) {
+    if (q.includes('what will') || q.includes('do with my data') || q.includes('protocol')) {
+      return `
+        <span class="answer-lead">I keep the final 20% of complete rows untouched, then search only the earlier rows.</span>
+        Features are standardized using training statistics only. I search a small symbolic language of linear terms, pairwise interactions, and squares,
+        then compare the winning compact model against a mean baseline and ridge regression on the untouched holdout.
+        ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+      `;
+    }
+    if (q.includes('kind of csv') || q.includes('requirements') || q.includes('works best')) {
+      return `
+        <span class="answer-lead">Use a CSV with at least 32 complete numeric rows and at least two numeric columns.</span>
+        Pick one numeric target and up to eight numeric features. Row order matters because the last rows become the holdout.
+        Dates or labels can stay in the file, but the current symbolic engine only models numeric columns.
+        ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+      `;
+    }
+    if (q.includes('refuse') || q.includes('claim') || q.includes('causal')) {
+      return `
+        <span class="answer-lead">I will not call an observational relationship causal just because it predicts well.</span>
+        A frozen holdout checks generalization inside this dataset. It does not establish intervention invariance, remove confounding,
+        or prove the relationship will survive a different population or future regime.
+      `;
+    }
+    return `
+      <span class="answer-lead">Upload a numeric CSV first.</span>
+      Choose a target and up to eight features. I’ll keep a holdout untouched, search for compact symbolic structure, compare baselines,
+      and then you can interrogate the result here.
+      ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+    `;
+  }
+
+  const model = data.symbolic_model;
+  const holdout = model.holdout;
+  const ridge = data.baselines.ridge;
+  const mean = data.baselines.mean;
+  const top = data.feature_importance.slice(0, 4);
+
+  if (q.includes('what did') || q.includes('find') || q.includes('summary') || q.includes('model')) {
+    return `
+      <span class="answer-lead">The best compact holdout-tested relationship is:</span>
+      <span class="code-block" style="display:block;margin:10px 0">${escapeHTML(model.program)}</span>
+      On the untouched final rows it reached <strong>R² ${fmt(holdout.r2, 3)}</strong> and
+      <strong>MAE ${fmt(holdout.mae, 3)}</strong>. ${escapeHTML(data.verdict)}
+      ${meta([
+        ['rows used', String(data.dataset.rows_used)],
+        ['holdout rows', String(data.dataset.holdout_rows)],
+        ['model posterior', pct(model.posterior, 1)],
+      ])}
+      ${actions([
+        { label: 'Which features matter?', action: 'ask', question: 'Which features matter most?' },
+        { label: 'Can I call this causal?', action: 'ask', question: 'Can I call this causal?' },
+        { label: 'Evidence', action: 'open-lab' },
+      ])}
+    `;
+  }
+
+  if (q.includes('feature') || q.includes('matter') || q.includes('important')) {
+    const readable = top.map((item, index) =>
+      `${index + 1}. <strong>${escapeHTML(item.feature)}</strong> (holdout MAE +${fmt(item.mae_increase, 3)} when shuffled)`
+    ).join('<br>');
+    return `
+      <span class="answer-lead">These features matter most to this model’s holdout predictions.</span>
+      ${readable || 'No stable feature importance signal was available.'}
+      <span class="answer-detail">This is permutation sensitivity, not causal importance.</span>
+      ${actions([{ label: 'Inspect all evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('good') || q.includes('accurate') || q.includes('holdout') || q.includes('baseline') || q.includes('trust')) {
+    return `
+      <span class="answer-lead">Judge it by the untouched holdout, not the training fit.</span>
+      The symbolic model has <strong>MAE ${fmt(holdout.mae, 3)}</strong>, ridge has
+      <strong>${fmt(ridge.mae, 3)}</strong>, and the mean baseline has <strong>${fmt(mean.mae, 3)}</strong>.
+      Holdout R² is <strong>${fmt(holdout.r2, 3)}</strong>.
+      ${meta([
+        ['train rows', String(data.dataset.train_rows)],
+        ['holdout rows', String(data.dataset.holdout_rows)],
+        ['outside train range', pct(data.extrapolation_fraction, 1)],
+      ])}
+      ${actions([{ label: 'Evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('equation') || q.includes('z(') || q.includes('standard')) {
+    return `
+      <span class="answer-lead">The equation uses standardized feature values.</span>
+      <strong>z(feature)</strong> means the raw value minus that feature’s training mean, divided by its training standard deviation.
+      Standardization is learned from training rows only, which keeps the symbolic search numerically stable without leaking holdout information.
+      ${actions([{ label: 'Show preprocessing values', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('causal') || q.includes('cause') || q.includes('prove')) {
+    return `
+      <span class="answer-lead">No—this result is predictive, not automatically causal.</span>
+      A compact equation that generalizes on held-out rows is evidence of a reproducible association inside this table.
+      To argue mechanism or causality, you would need stronger identification: interventions, natural experiments, domain assumptions,
+      or prospective evidence designed to separate competing explanations.
+    `;
+  }
+
+  if (q.includes('weak') || q.includes('limit') || q.includes('extrapolat') || q.includes('risk')) {
+    return `
+      <span class="answer-lead">The main risks are distribution shift, confounding, and extrapolation.</span>
+      <strong>${pct(data.extrapolation_fraction, 1)}</strong> of holdout feature cells lie outside the training min/max range.
+      Rook dropped <strong>${data.dataset.rows_dropped}</strong> rows that were incomplete or non-numeric for the selected columns.
+      The final slice is a real holdout inside this file, but it is still only one dataset.
+      ${actions([{ label: 'Evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  return `
+    <span class="answer-lead">Ask me about the discovered equation, holdout performance, important features, weaknesses, or whether the result is causal.</span>
+    ${actions([
+      { label: 'What did you find?', action: 'ask', question: 'What did you find?' },
+      { label: 'Which features matter?', action: 'ask', question: 'Which features matter most?' },
+      { label: 'Evidence', action: 'open-lab' },
+    ])}
+  `;
+}
+
 async function answerQuestion(question) {
   const q = question.trim().toLowerCase();
   if (state.context === 'market') return answerMarket(q);
   if (state.context === 'physics') return answerPhysics(q);
   if (state.context === 'discovery') return answerDiscovery(q);
+  if (state.context === 'custom') return answerCustom(q);
   return answerValidation(q);
 }
 
@@ -770,6 +916,7 @@ function openTool() {
   if (context === 'market') renderMarketTool();
   else if (context === 'physics') renderPhysicsTool();
   else if (context === 'discovery') renderDiscoveryTool();
+  else if (context === 'custom') renderCustomTool();
   else renderValidationTool();
 
   openSheet('tool-sheet');
@@ -971,6 +1118,7 @@ function renderLab() {
   if (state.context === 'market') body.innerHTML = marketLabHTML();
   else if (state.context === 'physics') body.innerHTML = physicsLabHTML();
   else if (state.context === 'discovery') body.innerHTML = discoveryLabHTML();
+  else if (state.context === 'custom') body.innerHTML = customLabHTML();
   else body.innerHTML = validationLabHTML();
 }
 
@@ -1164,7 +1312,9 @@ function bindEvents() {
 
   $('starter-grid').addEventListener('click', (event) => {
     const card = event.target.closest('[data-starter]');
-    if (card) askRook(card.dataset.starter);
+    if (!card) return;
+    if (card.dataset.openCustom === 'true') openTool();
+    else askRook(card.dataset.starter);
   });
 
   $('conversation').addEventListener('click', (event) => {
@@ -1241,6 +1391,7 @@ function bindEvents() {
       physics: 'Why is that the best explanation?',
       discovery: 'Why is this a meaningful discovery?',
       validation: 'Why should I trust this evaluation?',
+      custom: state.customData ? 'Why should I trust this holdout result?' : 'What will Rook do with my data?',
     }[state.context];
     askRook(question);
   });
