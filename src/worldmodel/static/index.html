@@ -96,6 +96,7 @@
 
         <div class="topbar-actions">
           <span class="run-status" id="run-status">Loading world…</span>
+          <span class="ai-status-pill" id="ai-status-pill">Local AI…</span>
           <button class="icon-button" id="new-chat-top" aria-label="New chat">＋</button>
           <button class="icon-button" id="more-button" aria-label="Settings">•••</button>
         </div>
@@ -124,6 +125,23 @@
               <option value="volatility">Volatility</option>
             </select>
           </label>
+
+          <div class="settings-divider"></div>
+          <div class="ai-setting-head">
+            <span>Local AI</span>
+            <strong id="ollama-status-text">Detecting Ollama…</strong>
+          </div>
+          <label>
+            <span>Ollama model</span>
+            <select id="ollama-model" disabled>
+              <option value="">Detecting local models…</option>
+            </select>
+          </label>
+          <label class="toggle-row">
+            <span>Use Ollama for chat</span>
+            <input id="ollama-enabled" type="checkbox" checked />
+          </label>
+          <button class="settings-secondary" id="refresh-ollama" type="button">Refresh Ollama</button>
           <button id="rerun-analysis">Re-run current world</button>
         </div>
       </header>
