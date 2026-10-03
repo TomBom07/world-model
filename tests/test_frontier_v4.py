@@ -7,7 +7,7 @@ def test_frontier_v4_canonical_suite_passes() -> None:
     result = FrontierResearchEngine(seed=7).run()
 
     assert result["version"] == "v4-frontier-suite"
-    assert result["all_checks_pass"], [name for name, ok in result["checks"].items() if not ok]
+    assert result["all_checks_pass"], {"failed": [name for name, ok in result["checks"].items() if not ok], "joint": result["joint_ontology_law"]}
     assert all(result["checks"].values())
     assert result["cross_domain_summary"]["minimum_improvement_over_pca"] > 0.02
     assert result["natural_experiments"]["adjusted_rand_index"] > 0.80
