@@ -12,14 +12,15 @@ class FrontierResearchEngine:
     def run(self) -> dict[str, object]:
         report = run_frontier_benchmark(seed=self.seed)
 
-        domains = report["cross_domain_ontology"]
         summary = report["cross_domain_summary"]
         natural = report["natural_experiments"]
         laws = report["latent_laws"]
+        joint = report["joint_ontology_law"]
         invention = report["theory_invention"]
         evolution = report["ontology_evolution"]
         performative = report["performative_selection"]
         prospective = report["prospective_falsification"]
+        objective = report["unified_objective"]
 
         invented = invention["invented"]
         invented_terms = set(invented["terms"]) if invented else set()
@@ -36,6 +37,10 @@ class FrontierResearchEngine:
             ),
             "latent_laws_are_predictive": bool(
                 laws["mean_validation_r2"] > 0.90
+            ),
+            "joint_ontology_and_law_discovery_is_predictive": bool(
+                joint["selected_dim"] == 2
+                and joint["mean_validation_r2"] > 0.55
             ),
             "open_world_rejects_incomplete_family": bool(
                 invention["open_world"]["unknown_probability"] > 0.50
@@ -68,6 +73,9 @@ class FrontierResearchEngine:
                 prospective["seal_valid"]
                 and prospective["score"]["seal_valid"]
                 and prospective["score"]["mae"] < 0.2
+            ),
+            "unified_objective_prefers_falsifiable_theory": bool(
+                objective["prefers_compact_falsifiable"]
             ),
         }
 
