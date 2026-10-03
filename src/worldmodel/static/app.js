@@ -657,7 +657,11 @@ async function answerQuestion(question) {
 
 async function askRook(question) {
   const clean = question.trim();
-  if (!clean || state.loading) return;
+  if (!clean) return;
+  if (state.loading) {
+    toast('Rook is still preparing the current world.');
+    return;
+  }
 
   const thread = ensureThread();
   if (thread.context !== state.context) thread.context = state.context;
@@ -693,9 +697,20 @@ async function fetchJSON(url, label) {
   return response.json();
 }
 
+function setComposerReady(ready) {
+  const input = $('ask-input');
+  const send = document.querySelector('.send-button');
+  input.disabled = !ready;
+  if (send) send.disabled = !ready;
+  $('ask-form').classList.toggle('loading', !ready);
+  if (!ready) input.placeholder = 'Preparing the world…';
+  else input.placeholder = CONTEXTS[state.context].placeholder;
+}
+
 async function runAnalysis() {
   if (state.loading) return;
   state.loading = true;
+  setComposerReady(false);
   $('run-status').textContent = 'Analyzing…';
   $('runtime-status').textContent = 'Running research stack…';
   $('status-dot').classList.remove('ok');
@@ -726,6 +741,7 @@ async function runAnalysis() {
     toast(`Run failed: ${error.message}`);
   } finally {
     state.loading = false;
+    setComposerReady(true);
   }
 }
 
@@ -1197,7 +1213,13 @@ function bindEvents() {
 
   $('rerun-analysis').addEventListener('click', async () => {
     closePopovers();
+    const thread = activeThread();
+    const hadConversation = Boolean(thread?.messages?.length);
     await runAnalysis();
+    if (hadConversation && state.health?.status === 'ok') {
+      createThread(state.context);
+      toast('World recomputed. Started a fresh chat so old answers are not mixed with the new run.');
+    }
   });
 
   $('recent-list').addEventListener('click', (event) => {
@@ -1263,7 +1285,9 @@ async function init() {
   renderRecent();
   renderConversation();
   bindEvents();
+  setComposerReady(false);
   await runAnalysis();
+  $('ask-input').focus();
 }
 
 init();
