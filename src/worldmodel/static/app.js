@@ -1,486 +1,442 @@
 const $ = (id) => document.getElementById(id);
 const fmt = (n, d = 3) => Number(n).toFixed(d);
-const pct = (n, digits = 0) => `${(Number(n) * 100).toFixed(digits)}%`;
-const pretty = (s) => String(s).replaceAll('_', ' ');
+const pct = (n, d = 0) => `${(Number(n) * 100).toFixed(d)}%`;
+const pretty = (value) => String(value ?? '').replaceAll('_', ' ');
+const titleCase = (value) => pretty(value).replace(/\b\w/g, (m) => m.toUpperCase());
 
-function metric(label, value, sub = '') {
-  return `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+const state = {
+  view: 'home',
+  strategic: null,
+  physics: null,
+  frontier: null,
+  sealed: null,
+  v0: null,
+  health: null,
+};
+
+const viewMeta = {
+  home: ['OVERVIEW', 'Understand the world, not just the output.'],
+  market: ['MARKET WORLD', 'Competing explanations for the same visible history.'],
+  physics: ['PHYSICS WORLD', 'Find the intervention that exposes a hidden law.'],
+  discoveries: ['DISCOVERIES', 'What Rook inferred, rejected, and invented.'],
+  validation: ['VALIDATION', 'Make the research hard to fake.'],
+  advanced: ['LAB DETAILS', 'Inspect the machinery and benchmark evidence.'],
+};
+
+function toast(message) {
+  const node = $('toast');
+  node.textContent = message;
+  node.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => node.classList.remove('show'), 2600);
 }
 
-function linePoints(seriesA, seriesB, width = 680, height = 250) {
+function go(view, focus = null) {
+  if (!viewMeta[view]) return;
+  state.view = view;
+
+  document.querySelectorAll('.view').forEach((node) => {
+    node.classList.toggle('active', node.id === `view-${view}`);
+  });
+  document.querySelectorAll('.nav-item[data-view]').forEach((node) => {
+    node.classList.toggle('active', node.dataset.view === view);
+  });
+
+  $('view-label').textContent = viewMeta[view][0];
+  $('page-title').textContent = viewMeta[view][1];
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (focus === 'experiment' && view === 'market') {
+    setTimeout(() => $('market-experiment')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 260);
+  }
+}
+
+function linePoints(seriesA, seriesB, width = 760, height = 260) {
   const all = [...seriesA, ...seriesB];
   const min = Math.min(...all);
   const max = Math.max(...all);
   const span = Math.max(max - min, 1e-9);
   const n = Math.max(seriesA.length, seriesB.length);
-  const points = (values) => values.map((value, i) => {
-    const x = (i / Math.max(n - 1, 1)) * width;
+
+  const convert = (values) => values.map((value, index) => {
+    const x = (index / Math.max(n - 1, 1)) * width;
     const y = height - ((value - min) / span) * height;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
-  return { a: points(seriesA), b: points(seriesB), min, max };
+
+  return { a: convert(seriesA), b: convert(seriesB) };
 }
 
-function multiLinePoints(series, width = 680, height = 190) {
-  const all = series.flat();
-  const min = Math.min(...all);
-  const max = Math.max(...all);
-  const span = Math.max(max - min, 1e-9);
-  const n = Math.max(...series.map(values => values.length));
-  return series.map(values => values.map((value, i) => {
-    const x = (i / Math.max(n - 1, 1)) * width;
-    const y = height - ((value - min) / span) * height;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' '));
+function renderTwoLineChart(id, a, b) {
+  const points = linePoints(a, b);
+  $(id).innerHTML = `
+    <line x1="0" y1="65" x2="760" y2="65" class="chart-grid"/>
+    <line x1="0" y1="130" x2="760" y2="130" class="chart-grid"/>
+    <line x1="0" y1="195" x2="760" y2="195" class="chart-grid"/>
+    <polyline points="${points.a}" class="chart-line a"/>
+    <polyline points="${points.b}" class="chart-line b"/>
+  `;
 }
 
-function renderStrategic(data) {
+function posteriorHTML(posterior) {
+  return Object.entries(posterior)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, mass]) => `
+      <div class="posterior-item">
+        <div class="posterior-top">
+          <span>${titleCase(name)}</span>
+          <strong>${pct(mass, 1)}</strong>
+        </div>
+        <div class="posterior-track"><i style="width:${Math.max(1, mass * 100)}%"></i></div>
+      </div>
+    `).join('');
+}
+
+function techItem(label, value) {
+  return `<div class="tech-item"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function auditRow(label, value) {
+  return `<div class="audit-row"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function whyItem(index, copy) {
+  return `<div class="why-item"><span>${index}</span><div>${copy}</div></div>`;
+}
+
+function renderHome() {
+  const s = state.strategic;
+  const f = state.frontier;
+  if (!s || !f) return;
+
+  const active = s.active_identification;
+  const truth = s.experiment.true_mechanism;
+  const predicted = active.predicted_mechanism;
+  const confidence = active.posterior[predicted] ?? 0;
+  const probe = active.selected_probe;
+  const invented = f.theory_invention?.invented;
+  const unknown = f.theory_invention?.open_world?.unknown_probability ?? 0;
+
+  $('hero-status').textContent = f.all_checks_pass ? 'Research checks passing' : 'Research check failure';
+  $('home-world').textContent = titleCase(predicted);
+  $('home-world-copy').textContent = predicted === truth
+    ? 'After the diagnostic reaction, Rook assigned the most probability to the hidden world that actually generated this controlled run.'
+    : 'Rook still has uncertainty about which hidden mechanism generated this run.';
+  $('home-world-confidence').textContent = pct(confidence, 1);
+  $('home-world-bar').style.width = `${confidence * 100}%`;
+
+  $('home-test').textContent = `${titleCase(probe.event_kind)} ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ`;
+  $('home-test-copy').textContent = 'This is the candidate event where the competing market worlds predict the most different reaction fingerprints.';
+
+  if (invented?.accepted) {
+    $('home-theory').textContent = 'Current theory family rejected';
+    $('home-theory-copy').textContent =
+      `Rook put ${pct(unknown, 0)} probability on “none of the above,” then found a new symbolic structure that improved held-out fit by ${pct(invented.relative_improvement, 1)}.`;
+  } else {
+    $('home-theory').textContent = 'No replacement theory accepted';
+    $('home-theory-copy').textContent = 'The open-world test did not accept a new symbolic theory in this run.';
+  }
+}
+
+function renderMarket() {
+  const data = state.strategic;
+  if (!data) return;
+
+  const active = data.active_identification;
   const eq = data.observational_equivalence;
-  const active = data.active_identification;
   const bench = data.identification_benchmark;
   const truth = data.experiment.true_mechanism;
-  const truePosterior = active.posterior[truth];
-  const entropyGain = (active.entropy_before - active.entropy_after) / Math.max(active.entropy_before, 1e-9);
-  const truthAblation = data.belief_ablation.find(x => x.mechanism === truth) || data.belief_ablation[0];
+  const predicted = active.predicted_mechanism;
+  const predictedMass = active.posterior[predicted] ?? 0;
+  const trueMass = active.posterior[truth] ?? 0;
+  const entropyRemoved = (active.entropy_before - active.entropy_after) / Math.max(active.entropy_before, 1e-9);
+  const probe = active.selected_probe;
 
-  $('strategic-metrics').innerHTML = [
-    metric('Twin-world correlation', pct(eq.mean_return_correlation, 2), 'ordinary returns look the same'),
-    metric('True-world posterior', pct(truePosterior, 1), pretty(truth)),
-    metric('Entropy removed', pct(entropyGain, 1), 'after one diagnostic reaction'),
-    metric('2nd-order uplift', pct(truthAblation.relative_improvement, 1), 'held-out MAE improvement'),
+  $('market-verdict').textContent = titleCase(predicted);
+  $('market-verdict-sub').textContent = `${pct(predictedMass, 1)} posterior after one diagnostic reaction`;
+  $('market-correlation').textContent = `${pct(eq.mean_return_correlation, 2)} path correlation`;
+  renderTwoLineChart('market-chart', data.path_preview.belief_reflexive, data.path_preview.liquidity_reflexive);
+
+  $('market-posterior').innerHTML = posteriorHTML(active.posterior);
+  $('market-explanation').innerHTML =
+    `<strong>Plain English:</strong> ordinary price history barely tells these worlds apart. Rook therefore waits for an event where belief feedback and liquidity constraints predict materially different cross-asset reactions.`;
+
+  $('market-info-score').textContent = `information ${fmt(active.information_score, 2)}`;
+  $('market-probe-name').textContent =
+    `${titleCase(probe.event_kind)} ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ`;
+  $('market-probe-copy').textContent =
+    'This is not “the event most likely to move prices.” It is the event most useful for telling the competing explanations apart.';
+
+  $('market-why-test').innerHTML = [
+    whyItem('A', 'Both theories already fit the ordinary history, so more ordinary observations have low information value.'),
+    whyItem('B', `Under this event the candidate worlds produce the largest expected disagreement score (${fmt(active.information_score, 2)}).`),
+    whyItem('C', 'After observing the reaction, Rook updates the probability of each hidden mechanism rather than simply refitting one model.'),
   ].join('');
 
-  $('twin-pill').textContent = `${pct(eq.mean_return_correlation, 2)} correlated`;
-  const paths = linePoints(
-    data.path_preview.belief_reflexive,
-    data.path_preview.liquidity_reflexive
-  );
-  $('twin-chart').innerHTML = `
-    <line x1="0" y1="62.5" x2="680" y2="62.5" class="grid-line"/>
-    <line x1="0" y1="125" x2="680" y2="125" class="grid-line"/>
-    <line x1="0" y1="187.5" x2="680" y2="187.5" class="grid-line"/>
-    <polyline points="${paths.a}" class="world-line belief-line"/>
-    <polyline points="${paths.b}" class="world-line liquidity-line"/>
-  `;
+  $('market-true-posterior').textContent = pct(trueMass, 1);
+  $('market-entropy').textContent = pct(entropyRemoved, 1);
+  $('market-active-edge').textContent =
+    `+${pct(bench.active_true_posterior - bench.random_true_posterior, 1)}`;
 
-  $('hidden-mechanics').innerHTML = Object.entries(data.hidden_mechanics).map(([name, m]) => `
-    <div class="mechanic-card">
-      <span class="mechanic-name">${pretty(name)}</span>
-      <strong>${fmt(m.mean_leverage, 2)}×</strong>
-      <small>mean leveraged-fund leverage</small>
-      <div class="micro-row"><span>dealer hedge</span><b>${fmt(m.dealer_hedge_magnitude, 2)}</b></div>
-      <div class="micro-row"><span>margin events</span><b>${m.margin_calls}</b></div>
-    </div>
-  `).join('');
-
-  const probe = active.selected_probe;
-  $('probe-pill').textContent = active.correct ? 'identified' : 'uncertain';
-  $('probe-copy').innerHTML = `
-    <span class="code-dim">best diagnostic event</span><br>
-    <strong>${pretty(probe.event_kind)} ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ</strong>
-    <br><span class="code-dim">information score ${fmt(active.information_score, 2)}</span>
-  `;
-
-  $('posterior').innerHTML = Object.entries(active.posterior).map(([name, mass]) => `
-    <div class="posterior-row">
-      <div class="factor-top"><span>${pretty(name)}</span><strong>${pct(mass, 1)}</strong></div>
-      <div class="bar"><i style="width:${mass * 100}%"></i></div>
-    </div>
-  `).join('') + `
-    <div class="truth-callout">
-      synthetic truth: <strong>${pretty(truth)}</strong> · inferred:
-      <strong>${pretty(active.predicted_mechanism)}</strong>
-    </div>
-  `;
-
-  const maxInfo = Math.max(...active.top_probes.map(p => p.information_score), 1e-9);
-  $('probes').innerHTML = active.top_probes.map((p, i) => `
-    <div class="probe-row">
-      <span class="probe-rank">0${i + 1}</span>
-      <span>${pretty(p.label)}</span>
-      <div class="probe-meter"><i style="width:${100 * p.information_score / maxInfo}%"></i></div>
-      <strong>${fmt(p.information_score, 2)}</strong>
-    </div>
-  `).join('');
-
-  $('belief-gap-pill').textContent = `gap ${fmt(data.belief_field.mean_higher_order_gap, 2)}`;
-  $('belief-factors').innerHTML = data.belief_field.factors.slice(0, 4).map(f => `
-    <div class="factor">
-      <div class="factor-top">
-        <strong>Belief factor ${f.factor}</strong>
-        <span>${pct(f.explained_variance, 1)} variance</span>
-      </div>
-      <div class="bar"><i style="width:${Math.min(100, f.explained_variance * 220)}%"></i></div>
-      <div class="muted">
-        ${f.dominant_dimensions.slice(0, 3).map(x => `${pretty(x.dimension)} ${fmt(x.loading, 2)}`).join(' · ')}
-      </div>
-    </div>
-  `).join('');
-
-  $('belief-ablation').innerHTML = data.belief_ablation.map(row => `
-    <div class="ablation-row">
-      <div><strong>${pretty(row.mechanism)}</strong><small>first-order only → + second-order</small></div>
-      <span>${fmt(row.first_order_mae)} → ${fmt(row.first_plus_second_order_mae)}</span>
-      <b class="${row.relative_improvement >= 0 ? 'safe' : 'flip'}">
-        ${row.relative_improvement >= 0 ? '+' : ''}${pct(row.relative_improvement, 1)}
-      </b>
-    </div>
-  `).join('');
-
-  $('identification-benchmark').innerHTML = `
-    <div class="benchmark-card">
-      <span>Identification accuracy</span>
-      <div class="versus"><strong>${pct(bench.active_accuracy, 1)}</strong><em>vs</em><b>${pct(bench.random_accuracy, 1)}</b></div>
-      <small>active event · random event</small>
-    </div>
-    <div class="benchmark-card">
-      <span>Posterior on true world</span>
-      <div class="versus"><strong>${pct(bench.active_true_posterior, 1)}</strong><em>vs</em><b>${pct(bench.random_true_posterior, 1)}</b></div>
-      <small>mean over ${bench.trials} hidden worlds</small>
-    </div>
-    <div class="benchmark-card">
-      <span>Entropy reduction</span>
-      <div class="versus"><strong>${fmt(bench.active_entropy_reduction, 2)}</strong><em>vs</em><b>${fmt(bench.random_entropy_reduction, 2)}</b></div>
-      <small>information gained from one event</small>
-    </div>
-  `;
-
-  $('boundary').textContent = data.scientific_boundary;
+  const truthAblation = data.belief_ablation.find((row) => row.mechanism === truth) || data.belief_ablation[0];
+  $('market-tech-grid').innerHTML = [
+    techItem('Hidden truth', titleCase(truth)),
+    techItem('Inferred mechanism', titleCase(predicted)),
+    techItem('Mean path correlation', pct(eq.mean_return_correlation, 3)),
+    techItem('Active identification accuracy', pct(bench.active_accuracy, 1)),
+    techItem('Random-event accuracy', pct(bench.random_accuracy, 1)),
+    techItem('Second-order belief uplift', pct(truthAblation.relative_improvement, 1)),
+    ...Object.entries(data.hidden_mechanics).flatMap(([name, row]) => [
+      techItem(`${titleCase(name)} leverage`, `${fmt(row.mean_leverage, 2)}×`),
+      techItem(`${titleCase(name)} margin calls`, row.margin_calls),
+    ]),
+  ].join('');
 }
 
+function renderPhysics() {
+  const data = state.physics;
+  if (!data) return;
 
-function renderPhysics(data) {
+  const active = data.active_identification;
   const eq = data.passive_equivalence;
-  const active = data.active_identification;
   const bench = data.identification_benchmark;
   const truth = data.experiment.true_mechanism;
-  const truePosterior = active.posterior[truth];
-  const entropyGain = (active.entropy_before - active.entropy_after)
-    / Math.max(active.entropy_before, 1e-9);
-
-  $('physics-metrics').innerHTML = [
-    metric('Passive correlation', pct(eq.velocity_correlation, 3), 'candidate laws look the same'),
-    metric('True-law posterior', pct(truePosterior, 1), pretty(truth)),
-    metric('Entropy removed', pct(entropyGain, 1), 'after one selected probe'),
-    metric('Active advantage', `+${pct(bench.active_true_posterior - bench.random_true_posterior, 1)}`, 'posterior vs random probe'),
-  ].join('');
-
-  $('physics-equivalence-pill').textContent = `${pct(eq.velocity_correlation, 3)} correlated`;
-  const passive = linePoints(
-    data.path_preview.linear_resistance,
-    data.path_preview.curved_resistance
-  );
-  $('physics-chart').innerHTML = `
-    <line x1="0" y1="62.5" x2="680" y2="62.5" class="grid-line"/>
-    <line x1="0" y1="125" x2="680" y2="125" class="grid-line"/>
-    <line x1="0" y1="187.5" x2="680" y2="187.5" class="grid-line"/>
-    <polyline points="${passive.a}" class="world-line linear-line"/>
-    <polyline points="${passive.b}" class="world-line curved-line"/>
-  `;
-
-  const v0 = data.mechanisms.tangent_at_velocity;
-  const linear = data.mechanisms.linear_resistance;
-  const curved = data.mechanisms.curved_resistance;
-  $('physics-mechanisms').innerHTML = `
-    <div class="mechanic-card">
-      <span class="mechanic-name">linear resistance</span>
-      <strong>D(v) = k·v</strong>
-      <small>k = ${fmt(linear.k, 3)}</small>
-      <div class="micro-row"><span>tangent at</span><b>v = ${fmt(v0, 2)}</b></div>
-    </div>
-    <div class="mechanic-card">
-      <span class="mechanic-name">curved resistance</span>
-      <strong>D(v) = c + q·v|v|</strong>
-      <small>c = ${fmt(curved.c, 3)} · q = ${fmt(curved.q, 3)}</small>
-      <div class="micro-row"><span>same local slope at</span><b>v = ${fmt(v0, 2)}</b></div>
-    </div>
-  `;
-
+  const predicted = active.predicted_mechanism;
+  const mass = active.posterior[predicted] ?? 0;
   const probe = active.selected_probe;
-  $('physics-probe-pill').textContent = active.correct ? 'law identified' : 'uncertain';
-  $('physics-probe-copy').innerHTML = `
-    <span class="code-dim">selected diagnostic intervention</span><br>
-    <strong>${pretty(probe.name)} · +${fmt(probe.force, 2)} force for ${probe.duration} steps</strong><br>
-    <span class="code-dim">expected information gain ${fmt(active.expected_information_gain, 3)}</span><br>
-    <span class="code-dim">preregistered ${data.preregistration.seal.slice(0, 16)}…</span>
-  `;
 
-  const half = Math.floor(active.observation.length / 2);
-  const fingerprintLines = multiLinePoints([
-    active.fingerprints.linear_resistance.slice(0, half),
-    active.fingerprints.curved_resistance.slice(0, half),
-    active.observation.slice(0, half),
-  ]);
-  $('physics-fingerprint-chart').innerHTML = `
-    <line x1="0" y1="47.5" x2="680" y2="47.5" class="grid-line"/>
-    <line x1="0" y1="95" x2="680" y2="95" class="grid-line"/>
-    <line x1="0" y1="142.5" x2="680" y2="142.5" class="grid-line"/>
-    <polyline points="${fingerprintLines[0]}" class="world-line linear-line"/>
-    <polyline points="${fingerprintLines[1]}" class="world-line curved-line"/>
-    <polyline points="${fingerprintLines[2]}" class="world-line observed-line"/>
-  `;
+  $('physics-verdict').textContent = titleCase(predicted);
+  $('physics-verdict-sub').textContent = `${pct(mass, 1)} posterior after the selected force pulse`;
+  $('physics-correlation').textContent = `${pct(eq.velocity_correlation, 3)} correlated`;
+  renderTwoLineChart('physics-chart', data.path_preview.linear_resistance, data.path_preview.curved_resistance);
+  $('physics-posterior').innerHTML = posteriorHTML(active.posterior);
+  $('physics-explanation').innerHTML =
+    '<strong>Why passive data fails:</strong> the two drag laws are constructed to have the same value and slope at the normal operating velocity. They only separate when the system is pushed away from that tangent point.';
 
-  $('physics-posterior').innerHTML = Object.entries(active.posterior).map(([name, mass]) => `
-    <div class="posterior-row">
-      <div class="factor-top"><span>${pretty(name)}</span><strong>${pct(mass, 1)}</strong></div>
-      <div class="bar"><i style="width:${mass * 100}%"></i></div>
-    </div>
-  `).join('') + `
-    <div class="truth-callout">
-      hidden truth: <strong>${pretty(truth)}</strong> · inferred:
-      <strong>${pretty(active.predicted_mechanism)}</strong>
-    </div>
-  `;
+  $('physics-info-score').textContent = `information ${fmt(active.expected_information_gain, 3)}`;
+  $('physics-probe-name').textContent =
+    `${titleCase(probe.name)} · force ${probe.force >= 0 ? '+' : ''}${fmt(probe.force, 2)} × ${probe.duration} steps`;
+  $('physics-probe-copy').textContent =
+    'Rook chose this intervention before seeing the synthetic outcome, then used the observed reaction to update its posterior over the two laws.';
 
-  const maxIg = Math.max(...active.ranked_probes.map(p => p.expected_information_gain), 1e-9);
-  $('physics-probes').innerHTML = active.ranked_probes.map((p, i) => `
-    <div class="probe-row">
-      <span class="probe-rank">0${i + 1}</span>
-      <span>${pretty(p.name)} · +${fmt(p.force, 2)}</span>
-      <div class="probe-meter"><i style="width:${100 * p.expected_information_gain / maxIg}%"></i></div>
-      <strong>${fmt(p.expected_information_gain, 2)}</strong>
-    </div>
-  `).join('');
+  $('physics-why-test').innerHTML = [
+    whyItem('A', 'Near normal operation, linear and curved drag look almost identical.'),
+    whyItem('B', 'The selected pulse moves velocity into a region where curvature becomes observable.'),
+    whyItem('C', `Across the benchmark, active probes put ${pct(bench.active_true_posterior, 1)} posterior mass on the true law on average versus ${pct(bench.random_true_posterior, 1)} for random probes.`),
+  ].join('');
 
-  $('physics-benchmark').innerHTML = `
-    <div class="benchmark-card">
-      <span>Identification accuracy</span>
-      <div class="versus"><strong>${pct(bench.active_accuracy, 1)}</strong><em>vs</em><b>${pct(bench.random_accuracy, 1)}</b></div>
-      <small>active probe · random probe</small>
-    </div>
-    <div class="benchmark-card">
-      <span>Posterior on true law</span>
-      <div class="versus"><strong>${pct(bench.active_true_posterior, 1)}</strong><em>vs</em><b>${pct(bench.random_true_posterior, 1)}</b></div>
-      <small>mean over ${bench.trials} hidden worlds</small>
-    </div>
-    <div class="benchmark-card">
-      <span>Entropy reduction</span>
-      <div class="versus"><strong>${fmt(bench.active_entropy_reduction, 2)}</strong><em>vs</em><b>${fmt(bench.random_entropy_reduction, 2)}</b></div>
-      <small>information gained from one experiment</small>
-    </div>
-  `;
-
-  $('physics-boundary').textContent = data.scientific_boundary;
+  $('physics-tech-grid').innerHTML = [
+    techItem('Hidden truth', titleCase(truth)),
+    techItem('Inferred law', titleCase(predicted)),
+    techItem('Linear law', data.mechanisms.linear_resistance.equation),
+    techItem('Curved law', data.mechanisms.curved_resistance.equation),
+    techItem('Tangent velocity', fmt(data.mechanisms.tangent_at_velocity, 3)),
+    techItem('Preregistration seal', `${data.preregistration.seal.slice(0, 18)}…`),
+    techItem('Seal verifies', data.preregistration.verified ? 'yes' : 'no'),
+    techItem('Active identification accuracy', pct(bench.active_accuracy, 1)),
+  ].join('');
 }
 
+function renderDiscoveries() {
+  const data = state.frontier;
+  if (!data) return;
 
-function renderFrontier(data) {
-  const checks = data.checks || {};
-  const entries = Object.entries(checks);
-  const passed = entries.filter(([, value]) => value).length;
-  const summary = data.cross_domain_summary;
+  const checks = Object.entries(data.checks);
+  const passed = checks.filter(([, ok]) => ok).length;
+  const total = checks.length;
+  const domains = data.cross_domain_ontology;
   const natural = data.natural_experiments;
-  const laws = data.latent_laws;
+  const openWorld = data.theory_invention?.open_world;
   const invented = data.theory_invention?.invented;
-  const unknown = data.theory_invention?.open_world?.unknown_probability ?? 0;
+  const evolution = data.ontology_evolution;
 
-  $('frontier-metrics').innerHTML = [
-    metric('V4 checks', `${passed}/${entries.length}`, data.all_checks_pass ? 'all falsification gates pass' : 'one or more gates failed'),
-    metric('Min ontology uplift', pct(summary.minimum_improvement_over_pca, 1), 'vs PCA across all domains'),
-    metric('Natural-regime ARI', fmt(natural.adjusted_rand_index, 3), `${natural.cluster_count} recovered regimes`),
-    metric('Latent-law R²', fmt(laws.mean_validation_r2, 3), 'held-out symbolic dynamics'),
-  ].join('');
+  $('frontier-score').textContent = `${passed}/${total} gates`;
+  $('frontier-score-sub').textContent = data.all_checks_pass ? 'all controlled falsification checks passed' : 'one or more checks failed';
 
-  $('frontier-status').textContent = data.all_checks_pass ? 'all checks pass' : 'check failures';
-  $('frontier-status').className = `pill ${data.all_checks_pass ? 'safe' : 'flip'}`;
+  const domainCopy = Object.entries(domains)
+    .map(([name, row]) => `${titleCase(name)} ${row.selected_dim}D / R² ${fmt(row.latent_recovery_r2, 2)}`)
+    .join(' · ');
+  $('latent-result').textContent =
+    `Rook independently selected two intervention-relevant latent coordinates in every tested domain. ${domainCopy}.`;
 
-  $('frontier-checks').innerHTML = entries.map(([name, ok]) => `
-    <div class="suggestion">
+  $('regime-result').textContent =
+    `Recovered ${natural.cluster_count} hidden environments with ARI ${fmt(natural.adjusted_rand_index, 3)} (${fmt(natural.silhouette, 3)} silhouette).`;
+
+  if (invented?.accepted) {
+    $('theory-result').textContent =
+      `“None of the above” reached ${pct(openWorld.unknown_probability, 0)} probability. The invented theory then cut held-out error by ${pct(invented.relative_improvement, 1)}.`;
+    $('invented-equation').textContent = invented.program;
+  } else {
+    $('theory-result').textContent = 'The current run did not accept a replacement theory.';
+    $('invented-equation').textContent = 'No invented theory accepted.';
+  }
+
+  const split = evolution.splits?.[0];
+  const merge = evolution.merges?.[0];
+  $('evolution-result').textContent =
+    `${split ? `Split signal on latent dimension ${split.dimension} (variance reduction ${pct(split.variance_reduction, 1)})` : 'No split'} · ${merge ? `merge signal between dimensions ${merge.left} and ${merge.right} (correlation ${fmt(merge.correlation, 4)})` : 'no merge'}.`;
+
+  $('frontier-checks').innerHTML = checks.map(([name, ok]) => `
+    <div class="check-item">
       <span>${pretty(name)}</span>
-      <strong class="${ok ? 'safe' : 'flip'}">${ok ? 'PASS' : 'FAIL'}</strong>
+      <b class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</b>
     </div>
   `).join('');
-
-  $('frontier-theory-pill').textContent = invented?.accepted ? 'new theory accepted' : 'no theory accepted';
-  $('frontier-theory').innerHTML = invented
-    ? `<span class="code-dim">unknown hypothesis mass</span><br>
-       <strong>${pct(unknown, 1)}</strong><br>
-       <span class="code-dim">invented terms</span><br>
-       <strong>${invented.terms.join(' + ')}</strong><br>
-       <span class="code-dim">holdout improvement ${pct(invented.relative_improvement, 1)}</span>`
-    : '<span class="code-dim">No replacement theory was accepted.</span>';
-
-  $('frontier-domains').innerHTML = Object.entries(data.cross_domain_ontology).map(([name, row]) => `
-    <div class="mechanic-card">
-      <span class="mechanic-name">${pretty(name)}</span>
-      <strong>${row.selected_dim}D</strong>
-      <small>selected causal latent space</small>
-      <div class="micro-row"><span>recovery R²</span><b>${fmt(row.latent_recovery_r2, 3)}</b></div>
-      <div class="micro-row"><span>vs PCA</span><b>+${pct(row.improvement_over_pca, 1)}</b></div>
-    </div>
-  `).join('');
-
-  $('frontier-boundary').textContent = data.scientific_boundary;
 }
 
+function renderValidation() {
+  const data = state.sealed;
+  if (!data) return;
 
-function renderSealed(data) {
   const audit = data.audit;
-  const metrics = data.metrics;
-  const manifest = data.manifest;
-  const ranked = Object.entries(metrics).sort((a, b) => a[1].mae - b[1].mae);
-  const best = ranked[0];
+  const ranked = Object.entries(data.metrics).sort((a, b) => a[1].mae - b[1].mae);
+  const valid = audit.leakage_violations === 0 && audit.all_forecast_seals_valid;
 
-  $('sealed-metrics').innerHTML = [
-    metric('Leakage violations', audit.leakage_violations, audit.leakage_violations === 0 ? 'fail-closed audit passed' : 'invalid experiment'),
-    metric('Forecast seals', audit.all_forecast_seals_valid ? '100%' : 'FAIL', audit.evaluation_events + ' evaluation events'),
-    metric('Best frozen MAE', fmt(best[1].mae), pretty(best[0])),
-    metric('Evaluation events', audit.evaluation_events, audit.training_events + ' training events'),
+  $('validation-verdict').textContent = valid ? 'Verified' : 'Invalid';
+  $('validation-verdict-sub').textContent = valid
+    ? 'no leakage violations; all forecast seals verify'
+    : 'integrity checks failed';
+
+  $('leakage-answer').textContent = audit.leakage_violations === 0
+    ? 'No future leakage detected.'
+    : `${audit.leakage_violations} leakage violations.`;
+
+  $('audit-list').innerHTML = [
+    auditRow('Training events', audit.training_events),
+    auditRow('Evaluation events', audit.evaluation_events),
+    auditRow('Last training event', String(audit.last_training_event)),
+    auditRow('First evaluation event', String(audit.first_evaluation_event)),
+    auditRow('Forecast seals', audit.all_forecast_seals_valid ? 'all valid' : 'failure'),
+    auditRow('Manifest', `${data.manifest.seal.slice(0, 16)}…`),
   ].join('');
 
-  $('seal-pill').textContent = audit.all_forecast_seals_valid && audit.leakage_violations === 0
-    ? 'verified'
-    : 'invalid';
-
-  $('manifest-hash').innerHTML = `
-    <span class="code-dim">experiment seal</span><br>
-    <strong>${manifest.seal.slice(0, 18)}…</strong><br>
-    <span class="code-dim">dataset ${manifest.dataset_hash.slice(0, 18)}…</span>
-  `;
-
-  $('seal-audit').innerHTML = [
-    ['train cutoff', String(audit.last_training_event)],
-    ['evaluation starts', String(audit.first_evaluation_event)],
-    ['feature leakage', audit.leakage_violations === 0 ? 'none detected' : String(audit.leakage_violations)],
-    ['forecast integrity', audit.all_forecast_seals_valid ? 'all seals verify' : 'seal failure'],
-  ].map(([label, value]) => `
-    <div class="suggestion"><span>${label}</span><code>${value}</code></div>
-  `).join('');
-
-  $('sealed-benchmark').innerHTML = ranked.map(([name, row], index) => `
+  $('validation-table').innerHTML = ranked.map(([name, row]) => `
     <tr>
-      <td class="${index === 0 ? 'winner' : ''}">${pretty(name)}</td>
+      <td>${titleCase(name)}</td>
       <td>${fmt(row.mae)}</td>
-      <td>${fmt(row.rmse)}</td>
       <td>${pct(row.directional_accuracy, 1)}</td>
       <td>${pct(row.interval_coverage_80, 1)}</td>
     </tr>
   `).join('');
 
-  $('sealed-boundary').textContent = data.scientific_boundary;
+  $('validation-boundary').textContent = data.scientific_boundary;
 }
 
-function renderV0(data) {
-  const exp = data.experiment;
-  const post = data.post_regime;
-  const inv = data.prediction_invariant;
-  const delta = exp.detected_switch_index == null
-    ? null
-    : Math.abs(exp.detected_switch_index - exp.true_switch_index);
+function renderAdvanced() {
+  const f = state.frontier;
+  const p = state.physics;
+  const s = state.sealed;
+  const v0 = state.v0;
+  if (!f || !p || !s || !v0) return;
 
-  $('v0-metrics').innerHTML = [
-    metric('Post-regime recovery', pct(post.term_recovery_jaccard, 0), 'symbolic term overlap'),
-    metric('Post-regime MAE', fmt(post.mae), 'held-out observations'),
-    metric('Break localization', delta == null ? 'miss' : `±${delta}`, 'observations from true break'),
-    metric('Model consensus', pct(inv.consensus, 0), inv.robust ? 'invariant survives' : 'models disagree'),
+  $('diag-api').textContent = state.health?.status === 'ok' ? 'online' : 'unknown';
+  $('diag-api').className = state.health?.status === 'ok' ? 'ok' : '';
+  $('diag-v4').textContent = f.all_checks_pass ? 'all gates pass' : 'failure';
+  $('diag-v4').className = f.all_checks_pass ? 'ok' : '';
+  $('diag-physics').textContent = p.active_identification.correct ? 'law identified' : 'uncertain';
+  $('diag-physics').className = p.active_identification.correct ? 'ok' : '';
+  $('diag-seals').textContent = s.audit.all_forecast_seals_valid ? 'verified' : 'failure';
+  $('diag-seals').className = s.audit.all_forecast_seals_valid ? 'ok' : '';
+
+  $('advanced-domains').innerHTML = Object.entries(f.cross_domain_ontology).map(([name, row]) =>
+    techItem(titleCase(name), `${row.selected_dim}D · recovery R² ${fmt(row.latent_recovery_r2, 3)} · +${pct(row.improvement_over_pca, 1)} vs PCA`)
+  ).join('');
+
+  $('advanced-laws').innerHTML = f.latent_laws.laws.map((law) => `
+    <div class="code-row">
+      <strong>${law.target}</strong><br>
+      ${law.program}<br>
+      <span style="color:#777f8b">validation R² ${fmt(law.validation_r2, 5)} · complexity ${law.complexity}</span>
+    </div>
+  `).join('');
+
+  $('advanced-program').textContent = v0.post_regime.program;
+  $('advanced-compiler').innerHTML = [
+    auditRow('Term recovery', pct(v0.post_regime.term_recovery_jaccard, 1)),
+    auditRow('Held-out MAE', fmt(v0.post_regime.mae)),
+    auditRow('True break', v0.experiment.true_switch_index),
+    auditRow('Detected break', v0.experiment.detected_switch_index ?? 'miss'),
+    auditRow('Model consensus', pct(v0.prediction_invariant.consensus, 1)),
   ].join('');
 
-  $('program').textContent = post.program;
-  $('truth').textContent = post.truth_terms.join(' + ');
-  $('recovery-pill').textContent = `${pct(post.term_recovery_jaccard, 0)} recovered`;
-  $('models').innerHTML = post.top_models.slice(0, 5).map(m => `
-    <div class="model-row">
-      <span>#${m.rank}</span>
-      <code title="${m.program}">${m.program}</code>
-      <span>${pct(m.posterior, 0)}</span>
-    </div>
-  `).join('');
+  $('advanced-objective').innerHTML = [
+    auditRow('Compact falsifiable score', fmt(f.unified_objective.compact_falsifiable_score, 4)),
+    auditRow('Brittle fit score', fmt(f.unified_objective.brittle_fit_score, 4)),
+    auditRow('Preferred', f.unified_objective.prefers_compact_falsifiable ? 'compact falsifiable theory' : 'brittle fit'),
+    auditRow('Prospective seal', f.prospective_falsification.seal_valid ? 'valid' : 'invalid'),
+    auditRow('Prospective MAE', fmt(f.prospective_falsification.score.mae, 4)),
+  ].join('');
+}
 
-  const n = exp.observations;
-  $('true-marker').style.left = `${100 * exp.true_switch_index / n}%`;
-  $('detected-marker').style.left = `${100 * (exp.detected_switch_index ?? 0) / n}%`;
-  $('detected-marker').style.display = exp.detected_switch_index == null ? 'none' : 'block';
-  $('break-copy').textContent = exp.detected_switch_index == null
-    ? `The old mechanism did not trigger the detector. Break score ${fmt(exp.break_score, 2)}.`
-    : `The hidden world changed at ${exp.true_switch_index}; RMC localized failure around ${exp.detected_switch_index} (score ${fmt(exp.break_score, 2)}).`;
+function renderAll() {
+  renderHome();
+  renderMarket();
+  renderPhysics();
+  renderDiscoveries();
+  renderValidation();
+  renderAdvanced();
 
-  $('ontology').innerHTML = `<p class="eyebrow">ONTOLOGY BREAK CANDIDATES</p>` +
-    data.ontology_break.slice(0, 4).map(s => `
-      <div class="suggestion"><code>${s.expression}</code><span>${fmt(s.residual_correlation, 2)} residual corr.</span></div>
-    `).join('');
+  const allGood = state.frontier?.all_checks_pass && state.physics?.active_identification?.correct;
+  $('engine-label').textContent = allGood ? 'Rook ready' : 'Check run';
+  $('engine-sub').textContent = allGood ? 'controlled research stack healthy' : 'one or more checks need attention';
+}
 
-  $('invariant').innerHTML = `
-    <div class="invariant-big">${inv.mean >= 0 ? '+' : ''}${fmt(inv.mean, 2)}</div>
-    <div class="invariant-range">80% model interval ${fmt(inv.low, 2)} → ${fmt(inv.high, 2)}</div>
-    <div class="consensus">
-      <div class="factor-top"><span>directional consensus</span><strong>${pct(inv.consensus, 0)}</strong></div>
-      <div class="bar"><i style="width:${inv.consensus * 100}%"></i></div>
-    </div>
-  `;
-
-  $('adversary').innerHTML = data.adversarial_scenarios.map(a => `
-    <div class="adv">
-      <span>${a.feature} ${a.delta >= 0 ? '+' : ''}${fmt(a.delta, 2)}σ</span>
-      <span>${a.prediction >= 0 ? '+' : ''}${fmt(a.prediction, 2)}</span>
-      <span class="${a.sign_flipped ? 'flip' : 'safe'}">${a.sign_flipped ? 'SIGN FLIP' : 'holds'}</span>
-    </div>
-  `).join('');
-
-  $('benchmark').innerHTML = data.sample_efficiency.map(row => {
-    const vals = {
-      RMC: row.rmc_mae,
-      Ridge: row.ridge_mae,
-      Poly: row.poly_ridge_mae,
-      RF: row.random_forest_mae,
-    };
-    const best = Object.entries(vals).sort((a, b) => a[1] - b[1])[0][0];
-    return `<tr>
-      <td>${row.train_size}</td>
-      <td>${fmt(row.rmc_mae)}</td>
-      <td>${fmt(row.ridge_mae)}</td>
-      <td>${fmt(row.poly_ridge_mae)}</td>
-      <td>${fmt(row.random_forest_mae)}</td>
-      <td class="winner">${best}</td>
-    </tr>`;
-  }).join('');
+async function fetchJSON(url, label) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${label} returned HTTP ${response.status}`);
+  return response.json();
 }
 
 async function run() {
   const button = $('run');
   button.disabled = true;
-  button.textContent = 'Inferring worlds…';
-  $('probe-copy').textContent = 'Simulating competing worlds and ranking diagnostic events…';
-  $('physics-probe-copy').textContent = 'Searching for the most diagnostic physical intervention…';
-  $('frontier-status').textContent = 'running';
-  $('program').textContent = 'Searching executable mechanisms…';
+  button.querySelector('span:first-child').textContent = 'Analyzing…';
+  $('engine-label').textContent = 'Rook thinking';
+  $('engine-sub').textContent = 'running competing worlds';
+
+  const seed = $('seed').value || '7';
+  const target = $('target').value || 'growth_equity';
 
   try {
-    const seed = $('seed').value || '7';
-    const target = $('target').value;
-    const [strategicResponse, physicsResponse, frontierResponse, sealedResponse, v0Response] = await Promise.all([
-      fetch(`/api/strategic?${new URLSearchParams({ seed, observations: '260' })}`),
-      fetch(`/api/physics?${new URLSearchParams({ seed, observations: '240' })}`),
-      fetch(`/api/frontier?${new URLSearchParams({ seed })}`),
-      fetch(`/api/sealed?${new URLSearchParams({ seed, observations: '120' })}`),
-      fetch(`/api/demo?${new URLSearchParams({ seed, target, observations: '360' })}`),
+    const [strategic, physics, frontier, sealed, v0, health] = await Promise.all([
+      fetchJSON(`/api/strategic?${new URLSearchParams({ seed, observations: '260' })}`, 'Strategic world'),
+      fetchJSON(`/api/physics?${new URLSearchParams({ seed, observations: '240' })}`, 'Physics world'),
+      fetchJSON(`/api/frontier?${new URLSearchParams({ seed })}`, 'Frontier suite'),
+      fetchJSON(`/api/sealed?${new URLSearchParams({ seed, observations: '120' })}`, 'Sealed replay'),
+      fetchJSON(`/api/demo?${new URLSearchParams({ seed, target, observations: '360' })}`, 'Mechanism compiler'),
+      fetchJSON('/api/health', 'Health check'),
     ]);
 
-    if (!strategicResponse.ok) throw new Error(`Strategic API HTTP ${strategicResponse.status}`);
-    if (!physicsResponse.ok) throw new Error(`Physics API HTTP ${physicsResponse.status}`);
-    if (!frontierResponse.ok) throw new Error(`Frontier API HTTP ${frontierResponse.status}`);
-    if (!sealedResponse.ok) throw new Error(`Sealed API HTTP ${sealedResponse.status}`);
-    if (!v0Response.ok) throw new Error(`Compiler API HTTP ${v0Response.status}`);
-
-    const [strategic, physics, frontier, sealed, v0] = await Promise.all([
-      strategicResponse.json(),
-      physicsResponse.json(),
-      frontierResponse.json(),
-      sealedResponse.json(),
-      v0Response.json(),
-    ]);
-    renderStrategic(strategic);
-    renderPhysics(physics);
-    renderFrontier(frontier);
-    renderSealed(sealed);
-    renderV0(v0);
-  } catch (err) {
-    $('probe-copy').textContent = `Experiment failed: ${err.message}`;
-    $('program').textContent = 'Compiler unavailable.';
+    Object.assign(state, { strategic, physics, frontier, sealed, v0, health });
+    renderAll();
+    toast('Analysis complete — start with the Overview.');
+  } catch (error) {
+    console.error(error);
+    $('engine-label').textContent = 'Run failed';
+    $('engine-sub').textContent = error.message;
+    toast(`Analysis failed: ${error.message}`);
   } finally {
     button.disabled = false;
-    button.textContent = 'Run the experiment';
+    button.querySelector('span:first-child').textContent = 'Run analysis';
   }
 }
 
+document.querySelectorAll('.nav-item[data-view]').forEach((button) => {
+  button.addEventListener('click', () => go(button.dataset.view));
+});
+
+document.querySelectorAll('[data-go]').forEach((button) => {
+  button.addEventListener('click', () => go(button.dataset.go, button.dataset.focus || null));
+});
+
 $('run').addEventListener('click', run);
+
+const dialog = $('guide-dialog');
+$('open-guide').addEventListener('click', () => dialog.showModal());
+
+dialog.addEventListener('click', (event) => {
+  if (event.target === dialog) dialog.close();
+});
+
+go('home');
 run();
