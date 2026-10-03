@@ -3,6 +3,8 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
+
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,7 @@ from .historical_engine import HistoricalResearchEngine
 from .physics_engine import PhysicsDiscoveryEngine
 from .frontier_engine import FrontierResearchEngine
 from .strategic_engine import StrategicResearchEngine
+from .strategic import ASSETS, EVENTS, MECHANISMS, StrategicMarketSimulator
 
 
 app = FastAPI(
@@ -53,6 +56,71 @@ def _cached_frontier(seed: int):
 @lru_cache(maxsize=16)
 def _cached_breakthrough(seed: int):
     return BreakthroughResearchEngine(seed=seed).run()
+
+
+@lru_cache(maxsize=128)
+def _cached_scenario(seed: int, observations: int, event_kind: str, magnitude: float):
+    """Counterfactual reaction fingerprint for a naturally occurring market event.
+
+    This does not trade or intervene in a real market. It asks how each synthetic
+    candidate world would react if the specified event were observed.
+    """
+    simulator = StrategicMarketSimulator(seed=seed)
+    events = simulator.generate_events(observations)
+    prefix = min(120, observations // 2)
+    event_index = min(
+        observations - 20,
+        max(prefix + 12, int(observations * 0.62)),
+    )
+
+    predictions: dict[str, dict[str, float]] = {}
+    vectors: dict[str, np.ndarray] = {}
+    for mechanism in MECHANISMS:
+        vector = simulator.counterfactual_fingerprint(
+            mechanism,
+            events=events,
+            event_index=event_index,
+            event_kind=event_kind,
+            magnitude=magnitude,
+            horizon=3,
+        )
+        vectors[mechanism] = vector
+        predictions[mechanism] = {
+            asset: float(value)
+            for asset, value in zip(ASSETS, vector, strict=True)
+        }
+
+    first, second = MECHANISMS
+    difference = np.abs(vectors[first] - vectors[second])
+    diagnostic_index = int(np.argmax(difference))
+    information_score = float(
+        np.linalg.norm(vectors[first] - vectors[second]) / 0.08
+    )
+
+    return {
+        "seed": seed,
+        "observations": observations,
+        "event_index": event_index,
+        "event": {
+            "kind": event_kind,
+            "magnitude": magnitude,
+            "label": f"{event_kind} {magnitude:+.1f}σ",
+        },
+        "asset_names": list(ASSETS),
+        "mechanisms": list(MECHANISMS),
+        "predictions": predictions,
+        "absolute_disagreement": {
+            asset: float(value)
+            for asset, value in zip(ASSETS, difference, strict=True)
+        },
+        "most_diagnostic_asset": ASSETS[diagnostic_index],
+        "information_score": information_score,
+        "scientific_boundary": (
+            "This is a counterfactual inside the controlled synthetic market. "
+            "It is an identification aid, not a forecast of real asset returns "
+            "and not a trading signal."
+        ),
+    }
 
 
 @app.get("/")
@@ -109,3 +177,15 @@ def frontier(seed: int = Query(7, ge=0, le=1_000_000)):
 @app.get("/api/breakthrough")
 def breakthrough(seed: int = Query(7, ge=0, le=1_000_000)):
     return _cached_breakthrough(seed)
+
+
+@app.get("/api/scenario")
+def scenario(
+    seed: int = Query(7, ge=0, le=1_000_000),
+    observations: int = Query(260, ge=180, le=600),
+    event_kind: str = Query("liquidity"),
+    magnitude: float = Query(-2.0, ge=-4.0, le=4.0),
+):
+    if event_kind not in EVENTS:
+        event_kind = "liquidity"
+    return _cached_scenario(seed, observations, event_kind, round(float(magnitude), 3))

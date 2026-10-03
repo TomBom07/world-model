@@ -12,9 +12,11 @@ const state = {
   sealed: null,
   v0: null,
   health: null,
+  scenario: null,
 };
 
 const viewMeta = {
+  copilot: ['ASK ROOK', 'Reason with the world model.'],
   home: ['OVERVIEW', 'Understand the world, not just the output.'],
   market: ['MARKET WORLD', 'Competing explanations for the same visible history.'],
   physics: ['PHYSICS WORLD', 'Find the intervention that exposes a hidden law.'],
@@ -102,6 +104,361 @@ function auditRow(label, value) {
 
 function whyItem(index, copy) {
   return `<div class="why-item"><span>${index}</span><div>${copy}</div></div>`;
+}
+
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function appendMessage(role, contentHTML, rawText = null) {
+  const wrap = document.createElement('div');
+  wrap.className = `message ${role === 'user' ? 'user-message' : 'rook-message'}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = role === 'user' ? 'You' : 'R';
+
+  const body = document.createElement('div');
+  body.className = 'message-body';
+
+  const label = document.createElement('span');
+  label.className = 'message-role';
+  label.textContent = role === 'user' ? 'You' : 'Rook';
+  body.appendChild(label);
+
+  const p = document.createElement('p');
+  if (rawText != null) {
+    p.textContent = rawText;
+  } else {
+    p.innerHTML = contentHTML;
+  }
+  body.appendChild(p);
+
+  wrap.append(avatar, body);
+  $('conversation').appendChild(wrap);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function renderCopilot() {
+  const s = state.strategic;
+  const f = state.frontier;
+  const sealed = state.sealed;
+  if (!s || !f || !sealed) return;
+
+  const active = s.active_identification;
+  const predicted = active.predicted_mechanism;
+  const confidence = active.posterior[predicted] ?? 0;
+  const probe = active.selected_probe;
+
+  $('copilot-status').textContent = f.all_checks_pass
+    ? 'Current controlled run is healthy'
+    : 'One or more research checks failed';
+  $('copilot-confidence').textContent = `${pct(confidence, 1)} leading`;
+
+  const aMass = active.posterior.belief_reflexive ?? 0;
+  const bMass = active.posterior.liquidity_reflexive ?? 0;
+  $('copilot-theory-a-p').textContent = `${pct(aMass, 1)} posterior`;
+  $('copilot-theory-b-p').textContent = `${pct(bMass, 1)} posterior`;
+  $('copilot-theory-a').classList.toggle('leading', aMass >= bMass);
+  $('copilot-theory-b').classList.toggle('leading', bMass > aMass);
+
+  $('copilot-best-test').textContent =
+    `${titleCase(probe.event_kind)} ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ`;
+  $('copilot-best-test-sub').textContent =
+    `information score ${fmt(active.information_score, 2)} · chosen to maximize disagreement, not expected return`;
+}
+
+function renderScenario(data) {
+  if (!data) return;
+  state.scenario = data;
+  $('scenario-info').textContent = `info ${fmt(data.information_score, 2)}`;
+
+  const a = data.predictions.belief_reflexive;
+  const b = data.predictions.liquidity_reflexive;
+
+  $('scenario-result').innerHTML = `
+    <div class="scenario-summary">
+      <strong>${titleCase(data.event.label)}</strong> is most diagnostic through
+      <strong>${titleCase(data.most_diagnostic_asset)}</strong>.
+    </div>
+    <div class="asset-comparison">
+      ${data.asset_names.map((asset) => {
+        const diagnostic = asset === data.most_diagnostic_asset;
+        const av = a[asset];
+        const bv = b[asset];
+        const gap = data.absolute_disagreement[asset];
+        return `
+          <div class="asset-row ${diagnostic ? 'diagnostic' : ''}">
+            <div class="asset-title">
+              <span>${titleCase(asset)}</span>
+              <span>gap ${fmt(gap, 3)}</span>
+            </div>
+            <div class="asset-worlds">
+              <div><small>belief world</small><strong>${av >= 0 ? '+' : ''}${fmt(av, 3)}</strong></div>
+              <div><small>liquidity world</small><strong>${bv >= 0 ? '+' : ''}${fmt(bv, 3)}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function runScenario({ silent = false, syncToBest = false } = {}) {
+  if (!state.strategic) {
+    if (!silent) toast('Run the main analysis first.');
+    return null;
+  }
+
+  if (syncToBest) {
+    const best = state.strategic.active_identification.selected_probe;
+    $('scenario-event').value = best.event_kind;
+    $('scenario-magnitude').value = String(best.magnitude);
+    $('scenario-magnitude-label').textContent =
+      `${best.magnitude >= 0 ? '+' : ''}${fmt(best.magnitude, 1)}σ`;
+  }
+
+  const button = $('run-scenario');
+  const eventKind = $('scenario-event').value;
+  const magnitude = Number($('scenario-magnitude').value);
+  const seed = $('seed').value || '7';
+
+  button.disabled = true;
+  button.textContent = 'Simulating…';
+
+  try {
+    const data = await fetchJSON(
+      `/api/scenario?${new URLSearchParams({
+        seed,
+        observations: '260',
+        event_kind: eventKind,
+        magnitude: String(magnitude),
+      })}`,
+      'Counterfactual'
+    );
+    renderScenario(data);
+    if (!silent) toast('Counterfactual recomputed.');
+    return data;
+  } catch (error) {
+    console.error(error);
+    $('scenario-result').innerHTML =
+      `<div class="scenario-placeholder">Counterfactual failed: ${escapeHTML(error.message)}</div>`;
+    if (!silent) toast(`Scenario failed: ${error.message}`);
+    return null;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Run counterfactual';
+  }
+}
+
+function evidenceTiles(items) {
+  return `<span class="answer-detail"><span class="answer-evidence">${items.map(([label, value]) =>
+    `<div><span>${label}</span><strong>${value}</strong></div>`
+  ).join('')}</span></span>`;
+}
+
+async function answerQuestion(question) {
+  const q = question.trim().toLowerCase();
+  const s = state.strategic;
+  const f = state.frontier;
+  const sealed = state.sealed;
+
+  if (!s || !f || !sealed) {
+    return '<span class="answer-lead">The world state is still loading.</span>Run the analysis first, then ask again.';
+  }
+
+  const active = s.active_identification;
+  const predicted = active.predicted_mechanism;
+  const confidence = active.posterior[predicted] ?? 0;
+  const probe = active.selected_probe;
+  const entropyRemoved =
+    (active.entropy_before - active.entropy_after) / Math.max(active.entropy_before, 1e-9);
+
+  if (q.includes('what if')) {
+    const eventNames = ['growth', 'inflation', 'liquidity', 'policy', 'sentiment'];
+    const namedEvent = eventNames.find((name) => q.includes(name));
+    if (namedEvent) $('scenario-event').value = namedEvent;
+
+    const data = await runScenario({ silent: true });
+    if (!data) return '<span class="answer-lead">I could not run that counterfactual.</span>';
+
+    const asset = data.most_diagnostic_asset;
+    const a = data.predictions.belief_reflexive[asset];
+    const b = data.predictions.liquidity_reflexive[asset];
+    return `
+      <span class="answer-lead">That event is useful because the worlds react differently.</span>
+      For <strong>${titleCase(data.event.label)}</strong>, the largest separation is in
+      <strong>${titleCase(asset)}</strong>: the belief-reflexive world predicts
+      <strong>${a >= 0 ? '+' : ''}${fmt(a, 3)}</strong> reaction units while the liquidity-reflexive
+      world predicts <strong>${b >= 0 ? '+' : ''}${fmt(b, 3)}</strong>.
+      ${evidenceTiles([
+        ['information score', fmt(data.information_score, 2)],
+        ['largest disagreement', fmt(data.absolute_disagreement[asset], 3)],
+        ['scope', 'synthetic world'],
+      ])}
+    `;
+  }
+
+  if (
+    q.includes('driving') ||
+    q.includes('what do you think') ||
+    q.includes('what is happening') ||
+    q.includes('currently think') ||
+    q.includes('believe about')
+  ) {
+    return `
+      <span class="answer-lead">My leading explanation is ${titleCase(predicted)}.</span>
+      After the selected diagnostic evidence, it carries <strong>${pct(confidence, 1)}</strong>
+      of the posterior mass. The alternative remains explicit rather than being deleted.
+      ${evidenceTiles([
+        ['belief world', pct(active.posterior.belief_reflexive ?? 0, 1)],
+        ['liquidity world', pct(active.posterior.liquidity_reflexive ?? 0, 1)],
+        ['path correlation', pct(s.observational_equivalence.mean_return_correlation, 2)],
+      ])}
+    `;
+  }
+
+  if (q === 'why?' || q.includes('why do you') || q.includes('why believe') || q.includes('why that')) {
+    return `
+      <span class="answer-lead">Because passive history barely separates the theories, but the diagnostic reaction does.</span>
+      Their ordinary paths are <strong>${pct(s.observational_equivalence.mean_return_correlation, 2)}</strong>
+      correlated in this controlled run. I therefore selected <strong>${titleCase(probe.event_kind)}
+      ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ</strong> because it maximizes
+      expected disagreement between their reaction fingerprints. After observing the reaction,
+      uncertainty fell by <strong>${pct(entropyRemoved, 1)}</strong>.
+      ${evidenceTiles([
+        ['information score', fmt(active.information_score, 2)],
+        ['entropy removed', pct(entropyRemoved, 1)],
+        ['inferred world', titleCase(predicted)],
+      ])}
+    `;
+  }
+
+  if (
+    q.includes('change your mind') ||
+    q.includes('falsif') ||
+    q.includes('prove you wrong') ||
+    q.includes('disconfirm')
+  ) {
+    const alternative = predicted === 'belief_reflexive' ? 'liquidity_reflexive' : 'belief_reflexive';
+    return `
+      <span class="answer-lead">A reaction closer to ${titleCase(alternative)} under the best discriminator would move me away from my current view.</span>
+      The next high-information event is <strong>${titleCase(probe.event_kind)}
+      ${probe.magnitude >= 0 ? '+' : ''}${fmt(probe.magnitude, 1)}σ</strong>.
+      Before seeing its outcome, both candidate worlds produce different preregistered reaction fingerprints.
+      Evidence landing nearer the alternative fingerprint would reduce the posterior on <strong>${titleCase(predicted)}</strong>.
+      <span class="answer-detail">That is the important part: Rook exposes what evidence would change the conclusion instead of only presenting a confident answer.</span>
+    `;
+  }
+
+  if (
+    q.includes('discover') ||
+    q.includes('invent') ||
+    q.includes('not given') ||
+    q.includes('new theory') ||
+    q.includes('unknown')
+  ) {
+    const open = f.theory_invention.open_world;
+    const invented = f.theory_invention.invented;
+    if (!invented?.accepted) {
+      return '<span class="answer-lead">No replacement theory was accepted in this run.</span>';
+    }
+    return `
+      <span class="answer-lead">I rejected the incomplete theory family and recovered missing symbolic structure.</span>
+      The explicit <strong>unknown</strong> hypothesis reached <strong>${pct(open.unknown_probability, 1)}</strong>.
+      Searching the residual structure then produced:
+      <span class="answer-detail"><strong>${escapeHTML(invented.program)}</strong></span>
+      On held-out data that reduced error by <strong>${pct(invented.relative_improvement, 1)}</strong>.
+      ${evidenceTiles([
+        ['unknown mass', pct(open.unknown_probability, 1)],
+        ['holdout improvement', pct(invented.relative_improvement, 1)],
+        ['accepted', invented.accepted ? 'yes' : 'no'],
+      ])}
+    `;
+  }
+
+  if (
+    q.includes('cheat') ||
+    q.includes('leak') ||
+    q.includes('seal') ||
+    q.includes('trust') ||
+    q.includes('look ahead')
+  ) {
+    const audit = sealed.audit;
+    return `
+      <span class="answer-lead">The sealed replay is designed so the forecast exists before the outcome is read.</span>
+      This run reports <strong>${audit.leakage_violations}</strong> feature-leakage violations and
+      <strong>${audit.all_forecast_seals_valid ? 'all forecast seals verify' : 'a seal failure'}</strong>.
+      The training/evaluation boundary is frozen and every baseline is scored on the same chronology.
+      ${evidenceTiles([
+        ['leakage violations', audit.leakage_violations],
+        ['forecast seals', audit.all_forecast_seals_valid ? 'valid' : 'failed'],
+        ['evaluation events', audit.evaluation_events],
+      ])}
+      <span class="answer-detail">This reduces look-ahead and tuning risk. It still does not prove causality or real trading alpha.</span>
+    `;
+  }
+
+  if (
+    q.includes('sure') ||
+    q.includes('confidence') ||
+    q.includes('uncertain') ||
+    q.includes('probability')
+  ) {
+    const alternative = Object.entries(active.posterior)
+      .sort((a, b) => b[1] - a[1])
+      .find(([name]) => name !== predicted);
+    return `
+      <span class="answer-lead">I am ${pct(confidence, 1)} on the leading controlled-world explanation, not 100% certain by default.</span>
+      The main alternative is <strong>${titleCase(alternative?.[0] ?? 'unknown')}</strong> at
+      <strong>${pct(alternative?.[1] ?? 0, 1)}</strong>. I also keep an explicit unknown-hypothesis
+      mechanism in the open-world research layer so I am not forced to choose a known theory when all known theories fit badly.
+    `;
+  }
+
+  if (q.includes('ontology') || q.includes('hidden variable') || q.includes('latent')) {
+    const summary = f.cross_domain_summary;
+    return `
+      <span class="answer-lead">“Ontology” here means the internal variables I decide are worth representing.</span>
+      In the controlled physics, ecology, and epidemic worlds, the intervention-aware learner selected
+      <strong>${summary.selected_dims.join(', ')}</strong> latent dimensions respectively and beat PCA
+      by at least <strong>${pct(summary.minimum_improvement_over_pca, 1)}</strong> in recovery quality.
+      The point is to test whether useful concepts can be discovered instead of handed to the model.
+    `;
+  }
+
+  return `
+    <span class="answer-lead">I can reason about the current experiment, but this is not a general chat model yet.</span>
+    Ask me <strong>what I believe</strong>, <strong>why</strong>, <strong>what would change my mind</strong>,
+    <strong>what I discovered</strong>, <strong>how the sealed evaluation works</strong>, or ask
+    <strong>“what if liquidity/inflation/policy/growth/sentiment?”</strong> and I’ll run the local counterfactual.
+  `;
+}
+
+async function askRook(question) {
+  const clean = question.trim();
+  if (!clean) return;
+
+  appendMessage('user', '', clean);
+  $('ask-input').value = '';
+  $('ask-input').style.height = 'auto';
+
+  const thinking = document.createElement('div');
+  thinking.className = 'message rook-message';
+  thinking.innerHTML =
+    '<div class="message-avatar">R</div><div class="message-body"><span class="message-role">Rook</span><p>Reasoning from the current run…</p></div>';
+  $('conversation').appendChild(thinking);
+  thinking.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  const answer = await answerQuestion(clean);
+  thinking.remove();
+  appendMessage('rook', answer);
 }
 
 function renderHome() {
@@ -369,6 +726,7 @@ function renderAdvanced() {
 }
 
 function renderAll() {
+  renderCopilot();
   renderHome();
   renderMarket();
   renderPhysics();
@@ -409,7 +767,8 @@ async function run() {
 
     Object.assign(state, { strategic, physics, frontier, sealed, v0, health });
     renderAll();
-    toast('Analysis complete — start with the Overview.');
+    await runScenario({ silent: true, syncToBest: true });
+    toast('Analysis complete — ask Rook what it thinks.');
   } catch (error) {
     console.error(error);
     $('engine-label').textContent = 'Run failed';
@@ -431,6 +790,35 @@ document.querySelectorAll('[data-go]').forEach((button) => {
 
 $('run').addEventListener('click', run);
 
+$('scenario-magnitude').addEventListener('input', () => {
+  const value = Number($('scenario-magnitude').value);
+  $('scenario-magnitude-label').textContent =
+    `${value >= 0 ? '+' : ''}${fmt(value, 1)}σ`;
+});
+$('run-scenario').addEventListener('click', () => runScenario());
+
+$('ask-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await askRook($('ask-input').value);
+});
+
+$('ask-input').addEventListener('input', () => {
+  const input = $('ask-input');
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(input.scrollHeight, 150)}px`;
+});
+
+$('ask-input').addEventListener('keydown', async (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    await askRook($('ask-input').value);
+  }
+});
+
+document.querySelectorAll('[data-question]').forEach((button) => {
+  button.addEventListener('click', () => askRook(button.dataset.question));
+});
+
 const dialog = $('guide-dialog');
 $('open-guide').addEventListener('click', () => dialog.showModal());
 
@@ -438,5 +826,5 @@ dialog.addEventListener('click', (event) => {
   if (event.target === dialog) dialog.close();
 });
 
-go('home');
+go('copilot');
 run();
