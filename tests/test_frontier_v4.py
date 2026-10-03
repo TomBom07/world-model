@@ -9,7 +9,9 @@ from worldmodel.prospective import create_prospective_entry, score_prospective_e
 
 def test_frontier_suite_passes_default_seed():
     report = FrontierResearchEngine(seed=7).run()
-    assert report["all_checks_pass"], report
+    for name, passed in report["checks"].items():
+        assert passed, f"frontier check failed: {name}"
+    assert report["all_checks_pass"]
 
 
 def test_cross_domain_nonlinear_ontology_is_not_single_domain_luck():
