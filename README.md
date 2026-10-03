@@ -54,7 +54,31 @@ V2 adds the infrastructure required before touching real historical outcomes:
 
 The included V2 demo still uses **historical-shaped synthetic events**. That is deliberate: the evaluation machinery is being tested before we expose it to real outcomes and create researcher degrees of freedom.
 
+## V3: causal renormalization research alpha
+
+V3 begins testing a harder question: can WorldModel discover **which latent variables
+are worth modeling**, rather than receiving the ontology by hand?
+
+The first implementation adds:
+
+- intervention-aware latent-coordinate discovery
+- a PCA baseline for falsifiable ontology-recovery tests
+- expected-information-gain experiment selection
+- an explicit `__unknown__` mechanism for "none of the above"
+- SHA-256 sealing of ontology + hypothesis + experiment claims
+- an OpenMechanismBench alpha with hidden ground truth
+
+Run it with:
+
+```bash
+worldmodel breakthrough --seed 7
+```
+
+This is an alpha research result, not a claim that general causal ontology discovery
+has been solved. See [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md).
+
 ## Implemented
+
 
 
 ### V0 — mechanism compilation
@@ -146,6 +170,7 @@ pytest
 worldmodel demo
 worldmodel strategic
 worldmodel sealed
+worldmodel breakthrough --seed 7
 worldmodel fred-fed --output data/fed-target-events.csv --start 1994-01-01
 worldmodel fred-evaluate --input data/fed-target-events.csv --training-end 2019-12-31T23:59:59+00:00 --evaluation-start 2020-01-01T00:00:00+00:00 --evaluation-end 2025-12-31T23:59:59+00:00 --report reports/fed-sealed.json
 worldmodel serve --reload
@@ -161,4 +186,4 @@ The project does **not** claim real-market alpha. No output is investment advice
 
 The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
 
-See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
+See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).

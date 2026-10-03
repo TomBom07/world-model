@@ -10,12 +10,14 @@ from .evaluation import (
     belief_order_ablation,
     observational_equivalence,
 )
+from .experiment_design import ExperimentCandidate, ExpectedInformationGainSelector
 from .identification import ActiveWorldIdentifier
+from .open_world import OpenWorldBayes
 from .strategic import MECHANISMS, StrategicMarketSimulator
 
 
 class StrategicResearchEngine:
-    """V1 experiment: infer which hidden strategic world is generating observations."""
+    """Infer which hidden strategic world is generating observations."""
 
     def __init__(self, seed: int = 7) -> None:
         self.seed = int(seed)
@@ -41,10 +43,49 @@ class StrategicResearchEngine:
         event_index = min(n - 20, max(prefix + 12, int(n * 0.62)))
         identifier = ActiveWorldIdentifier(simulator, observation_sigma=0.08)
         ranked = identifier.rank_probes(true_world.events, event_index)
+
+        uniform_prior = {
+            mechanism: 1.0 / len(MECHANISMS)
+            for mechanism in MECHANISMS
+        }
+        eig_candidates = [
+            ExperimentCandidate(
+                name=item.probe.label,
+                predictions=item.fingerprints,
+            )
+            for item in ranked
+        ]
+        eig_ranked = ExpectedInformationGainSelector(
+            sigma=identifier.observation_sigma,
+            samples_per_hypothesis=64,
+            seed=self.seed + 20_003,
+        ).score(eig_candidates, uniform_prior)
+        eig_by_name = {
+            item.name: item.expected_information_gain
+            for item in eig_ranked
+        }
+
         identification = identifier.observe_ranked(
             ranked[0],
             true_mechanism=true_mechanism,
             observation_seed=self.seed + 30_001,
+        )
+
+        open_world = OpenWorldBayes(
+            sigma=identifier.observation_sigma,
+            unknown_scale=10.0,
+            unknown_prior=0.05,
+        )
+        known_update = open_world.update(
+            prior=uniform_prior,
+            observation=identification.observation,
+            predictions=identification.predicted_fingerprints,
+        )
+        alien_observation = np.full_like(identification.observation, 4.0)
+        alien_update = open_world.update(
+            prior=uniform_prior,
+            observation=alien_observation,
+            predictions=identification.predicted_fingerprints,
         )
 
         random_rng = np.random.default_rng(self.seed + 81_337)
@@ -95,6 +136,11 @@ class StrategicResearchEngine:
             "active_identification": {
                 "selected_probe": asdict(identification.selected_probe),
                 "information_score": identification.information_score,
+                "expected_information_gain": eig_by_name.get(
+                    identification.selected_probe.label,
+                    0.0,
+                ),
+                "eig_best_probe": eig_ranked[0].name if eig_ranked else None,
                 "prior": identification.prior,
                 "posterior": identification.posterior,
                 "predicted_mechanism": identification.predicted_mechanism,
@@ -112,9 +158,18 @@ class StrategicResearchEngine:
                         "event_kind": item.probe.event_kind,
                         "magnitude": item.probe.magnitude,
                         "information_score": item.information_score,
+                        "expected_information_gain": eig_by_name.get(item.probe.label, 0.0),
                     }
                     for item in ranked[:6]
                 ],
+            },
+            "open_world_identification": {
+                "known_case": asdict(known_update),
+                "deliberate_unknown_challenge": asdict(alien_update),
+                "meaning": (
+                    "The explicit unknown hypothesis prevents forced selection of a known "
+                    "mechanism when an observation is incompatible with all candidates."
+                ),
             },
             "random_identification": {
                 "selected_probe": asdict(random_identification.selected_probe),
@@ -144,8 +199,9 @@ class StrategicResearchEngine:
             },
             "identification_benchmark": asdict(benchmark),
             "scientific_boundary": (
-                "V1 proves only that active identification can distinguish known synthetic "
-                "mechanisms in this controlled simulator. It does not establish causal "
-                "identification or trading edge in real markets."
+                "The strategic simulator proves only that active identification can "
+                "distinguish known synthetic mechanisms under controlled assumptions. "
+                "The V3 open-world layer can reject the candidate set, but this still "
+                "does not establish real-market causal identification or trading edge."
             ),
         }

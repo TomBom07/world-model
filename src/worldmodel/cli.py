@@ -27,6 +27,12 @@ def main() -> None:
     sealed.add_argument("--seed", type=int, default=7)
     sealed.add_argument("--observations", type=int, default=120)
 
+    breakthrough = sub.add_parser(
+        "breakthrough",
+        help="run the V3 causal-renormalization falsification suite",
+    )
+    breakthrough.add_argument("--seed", type=int, default=7)
+
     fred = sub.add_parser(
         "fred-fed",
         help="download FRED series and build a real Fed target-change event CSV",
@@ -66,6 +72,10 @@ def main() -> None:
         from .historical_engine import HistoricalResearchEngine
 
         result = HistoricalResearchEngine(seed=args.seed).run_demo(n=args.observations)
+    elif args.command == "breakthrough":
+        from .breakthrough_engine import BreakthroughResearchEngine
+
+        result = BreakthroughResearchEngine(seed=args.seed).run()
     elif args.command == "fred-fed":
         from datetime import date
 
@@ -116,7 +126,7 @@ def main() -> None:
             dataset,
             spec,
             seed=args.seed,
-            code_ref="worldmodel-0.3.0-fred-bootstrap",
+            code_ref="worldmodel-0.4.0-fred-bootstrap",
         ).run()
         if args.report:
             Path(args.report).write_text(
