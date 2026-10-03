@@ -302,6 +302,17 @@ worldmodel serve --reload
 
 Open `http://127.0.0.1:8000`.
 
+### Windows one-command verified launch
+
+After cloning the repository, open PowerShell in the repository folder and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-windows.ps1
+```
+
+That creates the virtual environment, installs dependencies, runs the full test suite,
+runs `worldmodel doctor --seed 7`, opens the browser, and starts the local dashboard.
+
 ## Research discipline
 
 V0 and V1 use **synthetic worlds whose hidden mechanisms are known to the evaluator**. This is intentional. A historical market backtest can reward a wrong explanation; synthetic worlds let us directly score whether the model recovered the actual generating mechanism.
