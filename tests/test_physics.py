@@ -33,6 +33,7 @@ def test_active_physics_probe_identifies_hidden_law():
     active = result["active_identification"]
     truth = result["experiment"]["true_mechanism"]
 
+    assert result["preregistration"]["verified"]
     assert active["correct"]
     assert active["posterior"][truth] > 0.90
     assert active["entropy_after"] < active["entropy_before"]
