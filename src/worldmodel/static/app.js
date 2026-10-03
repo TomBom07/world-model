@@ -867,7 +867,8 @@ function setComposerReady(ready) {
 async function runAnalysis() {
   if (state.loading) return;
   state.loading = true;
-  setComposerReady(false);
+  const customAlreadyUsable = state.context === 'custom' && Boolean(state.customData);
+  if (!customAlreadyUsable) setComposerReady(false);
   $('run-status').textContent = 'Analyzing…';
   $('runtime-status').textContent = 'Running research stack…';
   $('status-dot').classList.remove('ok');
@@ -1830,6 +1831,10 @@ async function init() {
   if (state.threads.length) {
     state.activeThreadId = state.threads[0].id;
     state.context = state.threads[0].context || 'market';
+    if (state.context === 'custom') {
+      state.customData = state.threads[0].customAnalysis || null;
+      state.customFileName = state.threads[0].customFileName || null;
+    }
   } else {
     createThread('market');
   }
@@ -1838,7 +1843,7 @@ async function init() {
   renderRecent();
   renderConversation();
   bindEvents();
-  setComposerReady(false);
+  setComposerReady(state.context === 'custom' && Boolean(state.customData));
   await runAnalysis();
   $('ask-input').focus();
 }
