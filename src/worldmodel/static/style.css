@@ -1293,3 +1293,27 @@ dialog::backdrop {
 
   .lab-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Interaction states */
+.composer.loading {
+  opacity: .72;
+}
+
+.composer textarea:disabled {
+  cursor: wait;
+  color: var(--muted);
+}
+
+.send-button:disabled {
+  cursor: wait;
+  opacity: .45;
+}
+
+.settings-menu > button:active,
+.tool-primary:active,
+.send-button:not(:disabled):active,
+.starter-card:active,
+.answer-action:active {
+  transform: scale(.985);
+}
