@@ -13,6 +13,7 @@ from .world_ops import (
     simulate_world,
     world_health,
 )
+from .world_ai import normalize_world_plan, propose_world_plan
 from .world_store import WorldStore
 
 
@@ -119,6 +120,11 @@ class PaperTradeClose(BaseModel):
 class ReportGenerate(BaseModel):
     title: str = Field(default="Living World Report", min_length=1, max_length=200)
     ollama_model: str | None = Field(default=None, max_length=200)
+
+
+class WorldAIBuildRequest(BaseModel):
+    model: str = Field(min_length=1, max_length=200)
+    brief: str = Field(default="", max_length=6000)
 
 
 @router.get("")
@@ -352,6 +358,97 @@ def close_paper_trade(project_id: str, trade_id: str, payload: PaperTradeClose):
         raise _not_found(error) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/{project_id}/ai/build")
+def build_world_with_ai(project_id: str, payload: WorldAIBuildRequest):
+    store = _store()
+    try:
+        snapshot = store.snapshot(project_id)
+    except KeyError as error:
+        raise _not_found(error) from error
+
+    try:
+        plan = normalize_world_plan(
+            propose_world_plan(
+                model=payload.model,
+                project=snapshot["project"],
+                sources=snapshot["sources"],
+                existing_entities=snapshot["entities"],
+                brief=payload.brief,
+            )
+        )
+    except (OllamaUnavailable, ValueError) as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+    existing_names = {item["name"].lower(): item for item in snapshot["entities"]}
+    created_entities = []
+    name_to_id = {item["name"].lower(): item["id"] for item in snapshot["entities"]}
+
+    for item in plan["entities"]:
+        key = item["name"].lower()
+        if key in existing_names:
+            name_to_id[key] = existing_names[key]["id"]
+            continue
+        entity = store.add_entity(
+            project_id,
+            name=item["name"],
+            kind=item["kind"],
+            attributes={"value": item["value"], "source": "ollama_world_builder"},
+        )
+        created_entities.append(entity)
+        name_to_id[key] = entity["id"]
+
+    created_relations = []
+    for item in plan["relations"]:
+        source_id = name_to_id.get(item["source"].lower())
+        target_id = name_to_id.get(item["target"].lower())
+        if not source_id or not target_id:
+            continue
+        created_relations.append(
+            store.add_relation(
+                project_id,
+                source_id=source_id,
+                target_id=target_id,
+                relation=item["relation"],
+                weight=item["weight"],
+                confidence=item["confidence"],
+                evidence=[{"type": "ai_proposal", "model": plan["model"]}],
+            )
+        )
+
+    created_claims = [
+        store.add_claim(
+            project_id,
+            text=item["text"],
+            status=item["status"],
+            confidence=item["confidence"],
+            evidence=[{"type": "ai_proposal", "model": plan["model"]}],
+        )
+        for item in plan["claims"]
+    ]
+
+    created_forecasts = [
+        store.add_forecast(
+            project_id,
+            question=item["question"],
+            probability=item["probability"],
+            horizon=item["horizon"],
+            rationale=item["rationale"],
+        )
+        for item in plan["forecasts"]
+    ]
+
+    return {
+        "model": plan["model"],
+        "created": {
+            "entities": len(created_entities),
+            "relations": len(created_relations),
+            "claims": len(created_claims),
+            "forecasts": len(created_forecasts),
+        },
+        "snapshot": store.snapshot(project_id),
+    }
 
 
 @router.post("/{project_id}/reports")
