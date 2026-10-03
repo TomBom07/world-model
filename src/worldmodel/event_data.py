@@ -162,6 +162,31 @@ class EventDataset:
         )
         return x, y
 
+    def to_csv(self, path: str | Path) -> None:
+        fieldnames = ["event_id", "family", "event_at"]
+        for name in self.feature_names:
+            fieldnames.extend([f"x_{name}", f"x_{name}__available_at"])
+        for name in self.outcome_names:
+            fieldnames.append(f"y_{name}")
+
+        with Path(path).open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in self.records:
+                payload: dict[str, object] = {
+                    "event_id": row.event_id,
+                    "family": row.family,
+                    "event_at": row.event_at.isoformat(),
+                }
+                for name in self.feature_names:
+                    payload[f"x_{name}"] = float(row.features[name])
+                    payload[f"x_{name}__available_at"] = parse_timestamp(
+                        row.feature_available_at[name]
+                    ).isoformat()
+                for name in self.outcome_names:
+                    payload[f"y_{name}"] = float(row.outcomes[name])
+                writer.writerow(payload)
+
     @classmethod
     def from_csv(
         cls,
