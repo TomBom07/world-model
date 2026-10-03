@@ -72,6 +72,7 @@ class ExperimentSpec:
 class SealedManifest:
     spec_hash: str
     dataset_schema_hash: str
+    dataset_hash: str
     code_ref: str
     created_at: datetime
     protocol_version: str = "sealed-history-v1"
@@ -86,12 +87,14 @@ class SealedManifest:
         spec: ExperimentSpec,
         *,
         dataset_schema: Mapping[str, Any],
+        dataset_payload: Any,
         code_ref: str,
         created_at: datetime | None = None,
     ) -> "SealedManifest":
         return cls(
             spec_hash=spec.hash,
             dataset_schema_hash=sha256_payload(dataset_schema),
+            dataset_hash=sha256_payload(dataset_payload),
             code_ref=str(code_ref),
             created_at=parse_timestamp(created_at or datetime.now(timezone.utc)),
         )
