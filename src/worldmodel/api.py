@@ -5,7 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -16,6 +17,7 @@ from .physics_engine import PhysicsDiscoveryEngine
 from .frontier_engine import FrontierResearchEngine
 from .strategic_engine import StrategicResearchEngine
 from .strategic import ASSETS, EVENTS, MECHANISMS, StrategicMarketSimulator
+from .custom_world import analyze_custom_world
 
 
 app = FastAPI(
@@ -26,6 +28,15 @@ app = FastAPI(
 
 STATIC_DIR = Path(__file__).with_name("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+class CustomWorldRequest(BaseModel):
+    columns: list[str] = Field(min_length=2, max_length=64)
+    rows: list[list[object]] = Field(min_length=1, max_length=20_000)
+    target: str
+    features: list[str] = Field(min_length=1, max_length=8)
+    holdout_fraction: float = Field(default=0.20, ge=0.15, le=0.40)
+    seed: int = Field(default=7, ge=0, le=1_000_000)
 
 
 @lru_cache(maxsize=32)
@@ -189,3 +200,18 @@ def scenario(
     if event_kind not in EVENTS:
         event_kind = "liquidity"
     return _cached_scenario(seed, observations, event_kind, round(float(magnitude), 3))
+
+
+@app.post("/api/custom/analyze")
+def custom_analyze(payload: CustomWorldRequest):
+    try:
+        return analyze_custom_world(
+            columns=payload.columns,
+            rows=payload.rows,
+            target=payload.target,
+            features=payload.features,
+            holdout_fraction=payload.holdout_fraction,
+            seed=payload.seed,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
