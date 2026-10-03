@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WorldModel — RMC Lab</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <div class="brand"><span class="orb"></span><span>WorldModel</span><span class="tag">RMC Lab</span></div>
+    <div class="status"><span class="pulse"></span> synthetic world online</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">REFLEXIVE MECHANISM COMPILER / V0</p>
+        <h1>Infer the rule that is<br><span>rewriting the world.</span></h1>
+        <p class="lede">A falsifiable sandbox for mechanism discovery, regime breaks, belief tomography, model disagreement and adversarial counterfactuals.</p>
+      </div>
+      <div class="controls glass">
+        <label>Seed<input id="seed" type="number" value="7" min="0" /></label>
+        <label>Target<select id="target">
+          <option value="growth_equity">Growth equity</option>
+          <option value="value_equity">Value equity</option>
+          <option value="two_year_yield">2Y yield</option>
+          <option value="usd">USD</option>
+          <option value="gold">Gold</option>
+          <option value="volatility">Volatility</option>
+        </select></label>
+        <button id="run">Compile world</button>
+      </div>
+    </section>
+
+    <section class="metrics" id="metrics"></section>
+
+    <section class="grid two">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">MECHANISM COMPILER</p><h2>Recovered world program</h2></div><span id="recovery-pill" class="pill"></span></div>
+        <div class="program" id="program">Compiling…</div>
+        <div class="truth-row"><span>Hidden truth</span><code id="truth"></code></div>
+        <div class="model-list" id="models"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">STRUCTURAL BREAK</p><h2>Regime shift detector</h2></div></div>
+        <div class="timeline-wrap">
+          <div class="timeline"><div id="true-marker" class="marker true"></div><div id="detected-marker" class="marker detected"></div></div>
+          <div class="legend"><span><i class="dot true-dot"></i> true break</span><span><i class="dot detected-dot"></i> detected</span></div>
+        </div>
+        <div class="break-copy" id="break-copy"></div>
+        <div class="ontology" id="ontology"></div>
+      </article>
+    </section>
+
+    <section class="grid two">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">BELIEF TOMOGRAPHY</p><h2>Reaction fingerprint</h2></div></div>
+        <p class="muted">SVD reconstructs latent cross-asset reaction factors without being told the hidden regime.</p>
+        <div id="tomography" class="factor-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">PREDICTION INVARIANTS</p><h2>What survives model uncertainty?</h2></div></div>
+        <div id="invariant"></div>
+        <h3>Destroyer · weakest counterfactuals</h3>
+        <div id="adversary" class="adversary"></div>
+      </article>
+    </section>
+
+    <section class="panel benchmark-panel">
+      <div class="panel-head"><div><p class="eyebrow">SAMPLE EFFICIENCY</p><h2>Can structure beat brute force with less data?</h2></div><span class="pill neutral">synthetic benchmark</span></div>
+      <p class="muted">The benchmark is intentionally structured and does not imply market alpha. Its purpose is to test the research hypothesis under controlled conditions.</p>
+      <div class="table-wrap"><table><thead><tr><th>Observations</th><th>RMC MAE</th><th>Ridge MAE</th><th>Poly Ridge MAE</th><th>Random forest MAE</th><th>Best</th></tr></thead><tbody id="benchmark"></tbody></table></div>
+    </section>
+
+    <footer>WorldModel RMC · Mechanism recovery first. Markets later.</footer>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
