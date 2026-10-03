@@ -8,13 +8,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .engine import ResearchEngine
+from .historical_engine import HistoricalResearchEngine
 from .strategic_engine import StrategicResearchEngine
 
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.2.0",
-    description="Reflexive Mechanism Compilation and active hidden-world identification.",
+    version="0.3.0",
+    description="Reflexive Mechanism Compilation, active identification and sealed historical replay.",
 )
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -31,6 +32,11 @@ def _cached_strategic(seed: int, observations: int):
     return StrategicResearchEngine(seed=seed).run_demo(n=observations)
 
 
+@lru_cache(maxsize=32)
+def _cached_sealed(seed: int, observations: int):
+    return HistoricalResearchEngine(seed=seed).run_demo(n=observations)
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -38,7 +44,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v1"}
+    return {"status": "ok", "engine": "rmc-v2"}
 
 
 @app.get("/api/demo")
@@ -59,3 +65,11 @@ def strategic(
     observations: int = Query(260, ge=180, le=600),
 ):
     return _cached_strategic(seed, observations)
+
+
+@app.get("/api/sealed")
+def sealed(
+    seed: int = Query(7, ge=0, le=1_000_000),
+    observations: int = Query(120, ge=64, le=500),
+):
+    return _cached_sealed(seed, observations)

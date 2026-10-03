@@ -34,7 +34,25 @@ It pre-registers each world's cross-asset reaction fingerprint, waits for that d
 
 That is **active world identification**, not simply forecasting the next price.
 
+## V2: sealed historical replay
+
+V2 adds the infrastructure required before touching real historical outcomes:
+
+- timestamped event datasets with per-feature availability times
+- hard look-ahead leakage rejection
+- immutable experiment specifications
+- SHA-256 manifest, dataset and forecast seals
+- frozen train/evaluation boundaries
+- event-level reaction fingerprints
+- calibrated 80% prediction intervals
+- RMC compared under the same protocol against Ridge, Random Forest, MLP and a local-level state-space baseline
+- MAE, RMSE, directional accuracy, Gaussian log score and interval coverage
+- CSV schema for future real event datasets
+
+The included V2 demo still uses **historical-shaped synthetic events**. That is deliberate: the evaluation machinery is being tested before we expose it to real outcomes and create researcher degrees of freedom.
+
 ## Implemented
+
 
 ### V0 — mechanism compilation
 
@@ -124,6 +142,7 @@ pip install -e ".[dev]"
 pytest
 worldmodel demo
 worldmodel strategic
+worldmodel sealed
 worldmodel serve --reload
 ```
 
@@ -135,6 +154,6 @@ V0 and V1 use **synthetic worlds whose hidden mechanisms are known to the evalua
 
 The project does **not** claim real-market alpha. No output is investment advice or a trading signal.
 
-The next phase is a sealed historical protocol: freeze the architecture before revealing later event windows, evaluate reaction fingerprints around earnings / CPI / FOMC-like events, and compare against state-space, tree, neural and simple statistical baselines without retroactive tuning.
+The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
 
 See [`docs/research-plan.md`](docs/research-plan.md) and [`docs/architecture.md`](docs/architecture.md).

@@ -20,6 +20,13 @@ def main() -> None:
     strategic.add_argument("--seed", type=int, default=7)
     strategic.add_argument("--observations", type=int, default=260)
 
+    sealed = sub.add_parser(
+        "sealed",
+        help="run the V2 sealed historical replay protocol demo",
+    )
+    sealed.add_argument("--seed", type=int, default=7)
+    sealed.add_argument("--observations", type=int, default=120)
+
     serve = sub.add_parser("serve", help="launch the local research dashboard")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -36,6 +43,10 @@ def main() -> None:
         from .strategic_engine import StrategicResearchEngine
 
         result = StrategicResearchEngine(seed=args.seed).run_demo(n=args.observations)
+    elif args.command == "sealed":
+        from .historical_engine import HistoricalResearchEngine
+
+        result = HistoricalResearchEngine(seed=args.seed).run_demo(n=args.observations)
     else:
         from .engine import ResearchEngine
 
@@ -43,7 +54,7 @@ def main() -> None:
             n=getattr(args, "observations", 360),
             target=getattr(args, "target", "growth_equity"),
         )
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == "__main__":
