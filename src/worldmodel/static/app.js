@@ -448,6 +448,16 @@ function answerPhysics(q) {
     `;
   }
 
+  if (q.includes('why is that') || q.includes('why do you believe')) {
+    return `
+      <span class="answer-lead">Because the selected probe separates laws that passive motion cannot.</span>
+      Ordinary trajectories are <strong>${pct(data.passive_equivalence.velocity_correlation, 3)}</strong> correlated because both laws match at the reference velocity.
+      The <strong>${titleCase(probe.name)}</strong> probe deliberately moves the system away from that locally tangent region,
+      and the observed reaction lands closer to <strong>${titleCase(predicted)}</strong>.
+      ${actions([{ label: 'Open experiment', action: 'open-tool' }, { label: 'Evidence', action: 'open-lab' }])}
+    `;
+  }
+
   if (q.includes('look the same') || q.includes('tangent') || q.includes('passive')) {
     const v0 = data.mechanisms.tangent_at_velocity;
     return `
@@ -501,6 +511,15 @@ function answerDiscovery(q) {
   const natural = data.natural_experiments;
   const summary = data.cross_domain_summary;
   const evolution = data.ontology_evolution;
+
+  if (q.includes('why is this') || q.includes('meaningful discovery')) {
+    return `
+      <span class="answer-lead">Because the benchmark makes Rook recover structure it was not handed, then checks that structure out of sample.</span>
+      The system is not rewarded merely for naming something interesting: latent coordinates must beat PCA, regimes must match hidden environments,
+      symbolic laws must predict held-out dynamics, and an invented theory must improve holdout error after the known theory family is rejected.
+      ${actions([{ label: 'All falsification gates', action: 'open-lab' }])}
+    `;
+  }
 
   if (q.includes('what did') || q.includes('discover') || q.includes('without being told')) {
     return `
@@ -556,6 +575,16 @@ function answerValidation(q) {
   const audit = data.audit;
   const ranked = Object.entries(data.metrics).sort((a, b) => a[1].mae - b[1].mae);
   const [bestName, best] = ranked[0];
+
+  if (q.includes('why should i trust') || q.includes('trust this evaluation')) {
+    return `
+      <span class="answer-lead">Trust the protocol more than the score.</span>
+      The useful evidence is that chronology is frozen, unavailable future features are rejected, every forecast is sealed before the outcome is read,
+      and every model gets the same evaluation window. In this run there are <strong>${audit.leakage_violations}</strong> leakage violations and
+      <strong>${audit.all_forecast_seals_valid ? 'all seals verify' : 'a seal failure'}</strong>.
+      ${actions([{ label: 'Inspect seals', action: 'open-tool' }, { label: 'Full audit', action: 'open-lab' }])}
+    `;
+  }
 
   if (q.includes('cheat') || q.includes('leak') || q.includes('trust') || q.includes('look ahead')) {
     return `
@@ -1184,7 +1213,15 @@ function bindEvents() {
     toast('Local conversation history cleared.');
   });
 
-  $('quick-why').addEventListener('click', () => askRook('Why?'));
+  $('quick-why').addEventListener('click', () => {
+    const question = {
+      market: 'Why do you believe that?',
+      physics: 'Why is that the best explanation?',
+      discovery: 'Why is this a meaningful discovery?',
+      validation: 'Why should I trust this evaluation?',
+    }[state.context];
+    askRook(question);
+  });
   $('quick-test').addEventListener('click', openTool);
   $('tool-button').addEventListener('click', openTool);
   $('open-lab').addEventListener('click', () => openSheet('lab-sheet'));
