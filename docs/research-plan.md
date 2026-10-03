@@ -47,7 +47,26 @@ Implemented:
 - active-event vs random-event information gain
 - held-out uplift from adding second-order beliefs
 
-## Phase 2 — sealed historical experiments
+## Phase 2 — sealed historical experiments 🟡 protocol implemented
+
+The anti-leakage and evaluation protocol is implemented. Real historical datasets have **not** been used yet.
+
+Implemented infrastructure:
+
+- explicit per-feature availability timestamps
+- fail-closed look-ahead leakage audit
+- immutable train/evaluation chronology
+- cryptographic experiment + dataset + forecast seals
+- frozen event-level forecasting
+- RMC reaction fingerprint model
+- Ridge baseline
+- Random Forest baseline
+- MLP neural baseline
+- local-level state-space baseline
+- calibration / log-score / directional / error metrics
+- CSV ingestion schema
+
+Next: freeze the first real dataset schema and only then expose the evaluation period.
 
 Freeze the architecture and hyperparameters **before** revealing later periods.
 
