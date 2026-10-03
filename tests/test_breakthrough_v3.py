@@ -6,6 +6,7 @@ from worldmodel.breakthrough_bench import (
     generate_hidden_ontology_problem,
     run_breakthrough_benchmark,
 )
+from worldmodel.breakthrough_engine import BreakthroughResearchEngine
 from worldmodel.experiment_design import (
     ExperimentCandidate,
     ExpectedInformationGainSelector,
@@ -98,3 +99,8 @@ def test_v3_breakthrough_suite_smoke():
         report["open_world"]["alien_observation"]["unknown_probability"]
         > report["open_world"]["familiar_observation"]["unknown_probability"]
     )
+
+
+def test_v3_full_research_checks_pass():
+    report = BreakthroughResearchEngine(seed=7).run()
+    assert report["all_checks_pass"], report
