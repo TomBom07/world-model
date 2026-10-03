@@ -25,7 +25,7 @@ from .world_api import router as world_router
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.7.0",
+    version="0.8.0",
     description="Reflexive Mechanism Compilation, active identification, theory invention and sealed falsification.",
 )
 
@@ -239,7 +239,7 @@ def worlds_workspace() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v4", "version": "0.7.0"}
+    return {"status": "ok", "engine": "rmc-v4", "version": "0.8.0"}
 
 
 @app.get("/api/demo")
