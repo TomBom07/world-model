@@ -138,8 +138,10 @@ class JointOntologyLawLearner:
 
     Candidate latent dimensions are scored by a compact falsifiable objective:
     held-out transition error + description-length pressure - intervention signal.
-    This couples state representation and executable dynamics instead of selecting
-    them as unrelated stages.
+    Dimensions that pass the ontology learner's permutation-null significance test
+    form a hard lower bound, so compression cannot erase intervention-supported
+    causal coordinates. This couples representation and executable dynamics without
+    treating statistically supported structure as optional.
     """
 
     def __init__(
@@ -165,9 +167,14 @@ class JointOntologyLawLearner:
             interventions = interventions[:, None]
         ontology = self.ontology_learner.fit(x, interventions)
         max_dim = min(ontology.max_dim, max(1, interventions.shape[1]))
+        # A coordinate that already beats the permutation-null intervention test is
+        # causal evidence, not optional description length. The joint dynamics stage
+        # may retain or add supported coordinates, but must not erase a statistically
+        # intervention-relevant axis merely because a smaller model compresses better.
+        min_dim = min(max_dim, max(1, ontology.selected_dim))
         candidates: list[tuple[int, float, LatentLawResult]] = []
 
-        for k in range(1, max_dim + 1):
+        for k in range(min_dim, max_dim + 1):
             z = ontology.transform(x, n_components=k)
             law = self.law_compiler.fit(z, controls=interventions)
             signal = float(np.sum(ontology.canonical_correlations[:k] ** 2))
