@@ -66,7 +66,15 @@ Implemented infrastructure:
 - calibration / log-score / directional / error metrics
 - CSV ingestion schema
 
-Next: freeze the first real dataset schema and only then expose the evaluation period.
+Real-data bootstrap now available:
+
+- keyless FRED series downloader
+- Fed target effective-date change events
+- explicit pre-event market-state features
+- cross-asset daily reaction fingerprints
+- CLI that requires the user to state the train/evaluation boundary
+
+This bootstrap is intentionally **not** treated as a clean FOMC announcement study because effective-date timing and daily closes are too coarse. Next, replace it with exact official announcement timestamps + point-in-time/vintage data + intraday outcomes without changing the sealed scoring protocol.
 
 Freeze the architecture and hyperparameters **before** revealing later periods.
 
