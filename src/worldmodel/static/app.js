@@ -21,6 +21,19 @@ function linePoints(seriesA, seriesB, width = 680, height = 250) {
   return { a: points(seriesA), b: points(seriesB), min, max };
 }
 
+function multiLinePoints(series, width = 680, height = 190) {
+  const all = series.flat();
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const span = Math.max(max - min, 1e-9);
+  const n = Math.max(...series.map(values => values.length));
+  return series.map(values => values.map((value, i) => {
+    const x = (i / Math.max(n - 1, 1)) * width;
+    const y = height - ((value - min) / span) * height;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' '));
+}
+
 function renderStrategic(data) {
   const eq = data.observational_equivalence;
   const active = data.active_identification;
@@ -133,6 +146,121 @@ function renderStrategic(data) {
   `;
 
   $('boundary').textContent = data.scientific_boundary;
+}
+
+
+function renderPhysics(data) {
+  const eq = data.passive_equivalence;
+  const active = data.active_identification;
+  const bench = data.identification_benchmark;
+  const truth = data.experiment.true_mechanism;
+  const truePosterior = active.posterior[truth];
+  const entropyGain = (active.entropy_before - active.entropy_after)
+    / Math.max(active.entropy_before, 1e-9);
+
+  $('physics-metrics').innerHTML = [
+    metric('Passive correlation', pct(eq.velocity_correlation, 3), 'candidate laws look the same'),
+    metric('True-law posterior', pct(truePosterior, 1), pretty(truth)),
+    metric('Entropy removed', pct(entropyGain, 1), 'after one selected probe'),
+    metric('Active advantage', `+${pct(bench.active_true_posterior - bench.random_true_posterior, 1)}`, 'posterior vs random probe'),
+  ].join('');
+
+  $('physics-equivalence-pill').textContent = `${pct(eq.velocity_correlation, 3)} correlated`;
+  const passive = linePoints(
+    data.path_preview.linear_resistance,
+    data.path_preview.curved_resistance
+  );
+  $('physics-chart').innerHTML = `
+    <line x1="0" y1="62.5" x2="680" y2="62.5" class="grid-line"/>
+    <line x1="0" y1="125" x2="680" y2="125" class="grid-line"/>
+    <line x1="0" y1="187.5" x2="680" y2="187.5" class="grid-line"/>
+    <polyline points="${passive.a}" class="world-line linear-line"/>
+    <polyline points="${passive.b}" class="world-line curved-line"/>
+  `;
+
+  const v0 = data.mechanisms.tangent_at_velocity;
+  const linear = data.mechanisms.linear_resistance;
+  const curved = data.mechanisms.curved_resistance;
+  $('physics-mechanisms').innerHTML = `
+    <div class="mechanic-card">
+      <span class="mechanic-name">linear resistance</span>
+      <strong>D(v) = k·v</strong>
+      <small>k = ${fmt(linear.k, 3)}</small>
+      <div class="micro-row"><span>tangent at</span><b>v = ${fmt(v0, 2)}</b></div>
+    </div>
+    <div class="mechanic-card">
+      <span class="mechanic-name">curved resistance</span>
+      <strong>D(v) = c + q·v|v|</strong>
+      <small>c = ${fmt(curved.c, 3)} · q = ${fmt(curved.q, 3)}</small>
+      <div class="micro-row"><span>same local slope at</span><b>v = ${fmt(v0, 2)}</b></div>
+    </div>
+  `;
+
+  const probe = active.selected_probe;
+  $('physics-probe-pill').textContent = active.correct ? 'law identified' : 'uncertain';
+  $('physics-probe-copy').innerHTML = `
+    <span class="code-dim">selected diagnostic intervention</span><br>
+    <strong>${pretty(probe.name)} · +${fmt(probe.force, 2)} force for ${probe.duration} steps</strong><br>
+    <span class="code-dim">expected information gain ${fmt(active.expected_information_gain, 3)}</span><br>
+    <span class="code-dim">preregistered ${data.preregistration.seal.slice(0, 16)}…</span>
+  `;
+
+  const half = Math.floor(active.observation.length / 2);
+  const fingerprintLines = multiLinePoints([
+    active.fingerprints.linear_resistance.slice(0, half),
+    active.fingerprints.curved_resistance.slice(0, half),
+    active.observation.slice(0, half),
+  ]);
+  $('physics-fingerprint-chart').innerHTML = `
+    <line x1="0" y1="47.5" x2="680" y2="47.5" class="grid-line"/>
+    <line x1="0" y1="95" x2="680" y2="95" class="grid-line"/>
+    <line x1="0" y1="142.5" x2="680" y2="142.5" class="grid-line"/>
+    <polyline points="${fingerprintLines[0]}" class="world-line linear-line"/>
+    <polyline points="${fingerprintLines[1]}" class="world-line curved-line"/>
+    <polyline points="${fingerprintLines[2]}" class="world-line observed-line"/>
+  `;
+
+  $('physics-posterior').innerHTML = Object.entries(active.posterior).map(([name, mass]) => `
+    <div class="posterior-row">
+      <div class="factor-top"><span>${pretty(name)}</span><strong>${pct(mass, 1)}</strong></div>
+      <div class="bar"><i style="width:${mass * 100}%"></i></div>
+    </div>
+  `).join('') + `
+    <div class="truth-callout">
+      hidden truth: <strong>${pretty(truth)}</strong> · inferred:
+      <strong>${pretty(active.predicted_mechanism)}</strong>
+    </div>
+  `;
+
+  const maxIg = Math.max(...active.ranked_probes.map(p => p.expected_information_gain), 1e-9);
+  $('physics-probes').innerHTML = active.ranked_probes.map((p, i) => `
+    <div class="probe-row">
+      <span class="probe-rank">0${i + 1}</span>
+      <span>${pretty(p.name)} · +${fmt(p.force, 2)}</span>
+      <div class="probe-meter"><i style="width:${100 * p.expected_information_gain / maxIg}%"></i></div>
+      <strong>${fmt(p.expected_information_gain, 2)}</strong>
+    </div>
+  `).join('');
+
+  $('physics-benchmark').innerHTML = `
+    <div class="benchmark-card">
+      <span>Identification accuracy</span>
+      <div class="versus"><strong>${pct(bench.active_accuracy, 1)}</strong><em>vs</em><b>${pct(bench.random_accuracy, 1)}</b></div>
+      <small>active probe · random probe</small>
+    </div>
+    <div class="benchmark-card">
+      <span>Posterior on true law</span>
+      <div class="versus"><strong>${pct(bench.active_true_posterior, 1)}</strong><em>vs</em><b>${pct(bench.random_true_posterior, 1)}</b></div>
+      <small>mean over ${bench.trials} hidden worlds</small>
+    </div>
+    <div class="benchmark-card">
+      <span>Entropy reduction</span>
+      <div class="versus"><strong>${fmt(bench.active_entropy_reduction, 2)}</strong><em>vs</em><b>${fmt(bench.random_entropy_reduction, 2)}</b></div>
+      <small>information gained from one experiment</small>
+    </div>
+  `;
+
+  $('physics-boundary').textContent = data.scientific_boundary;
 }
 
 
@@ -262,27 +390,32 @@ async function run() {
   button.disabled = true;
   button.textContent = 'Inferring worlds…';
   $('probe-copy').textContent = 'Simulating competing worlds and ranking diagnostic events…';
+  $('physics-probe-copy').textContent = 'Searching for the most diagnostic physical intervention…';
   $('program').textContent = 'Searching executable mechanisms…';
 
   try {
     const seed = $('seed').value || '7';
     const target = $('target').value;
-    const [strategicResponse, sealedResponse, v0Response] = await Promise.all([
+    const [strategicResponse, physicsResponse, sealedResponse, v0Response] = await Promise.all([
       fetch(`/api/strategic?${new URLSearchParams({ seed, observations: '260' })}`),
+      fetch(`/api/physics?${new URLSearchParams({ seed, observations: '240' })}`),
       fetch(`/api/sealed?${new URLSearchParams({ seed, observations: '120' })}`),
       fetch(`/api/demo?${new URLSearchParams({ seed, target, observations: '360' })}`),
     ]);
 
     if (!strategicResponse.ok) throw new Error(`Strategic API HTTP ${strategicResponse.status}`);
+    if (!physicsResponse.ok) throw new Error(`Physics API HTTP ${physicsResponse.status}`);
     if (!sealedResponse.ok) throw new Error(`Sealed API HTTP ${sealedResponse.status}`);
     if (!v0Response.ok) throw new Error(`Compiler API HTTP ${v0Response.status}`);
 
-    const [strategic, sealed, v0] = await Promise.all([
+    const [strategic, physics, sealed, v0] = await Promise.all([
       strategicResponse.json(),
+      physicsResponse.json(),
       sealedResponse.json(),
       v0Response.json(),
     ]);
     renderStrategic(strategic);
+    renderPhysics(physics);
     renderSealed(sealed);
     renderV0(v0);
   } catch (err) {
@@ -290,7 +423,7 @@ async function run() {
     $('program').textContent = 'Compiler unavailable.';
   } finally {
     button.disabled = false;
-    button.textContent = 'Run world experiment';
+    button.textContent = 'Run the experiment';
   }
 }
 

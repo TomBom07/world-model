@@ -308,6 +308,17 @@ button:disabled {
 
 .line-key.belief { background: var(--accent2); }
 .line-key.liquidity { background: var(--accent); }
+.line-key.linear { background: var(--accent2); }
+.line-key.curved { background: var(--warm); }
+.line-key.observed { background: #f5f7f8; }
+
+.linear-line { stroke: var(--accent2); }
+.curved-line { stroke: var(--warm); }
+.observed-line {
+  stroke: #f5f7f8;
+  stroke-dasharray: 6 5;
+}
+.compact-chart { height: 190px; }
 
 .mechanics {
   display: grid;

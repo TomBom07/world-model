@@ -52,6 +52,46 @@ The system is allowed to change not only its prediction, but its explanation of 
 
 > WorldModel is a research project, not a stock-prediction bot. Synthetic worlds are used where the hidden truth is known so mechanism recovery can be scored directly.
 
+
+## Cross-domain proof: hidden physics
+
+The discovery loop is not tied to markets.
+
+A second controlled world contains two different resistance laws:
+
+```text
+linear:  D(v) = k·v
+curved:  D(v) = c + q·v|v|
+```
+
+The curved law is constructed so that **its value and first derivative exactly match the linear law at the normal operating velocity**. Around ordinary operation, the two worlds are therefore locally indistinguishable to first order.
+
+WorldModel receives several possible force probes, preregisters the reaction predicted by each law, selects the probe with the highest expected information gain, and updates its posterior after the synthetic experiment.
+
+This is deliberately a different domain using the same discovery primitives:
+
+```text
+passive evidence
+      ↓
+competing executable laws
+      ↓
+expected-information-gain search
+      ↓
+diagnostic force pulse
+      ↓
+Bayesian update
+      ↓
+hidden law revealed to evaluator
+```
+
+Run it with:
+
+```bash
+worldmodel physics --seed 7
+```
+
+The purpose is not to claim autonomous physics discovery. It is a falsifiable test that the **observe → compete → probe → falsify → update** loop transfers beyond the market simulator.
+
 ## V1: strategic hidden worlds
 
 V1 makes the problem deliberately harder.
@@ -120,6 +160,7 @@ Run it with:
 
 ```bash
 worldmodel breakthrough --seed 7
+worldmodel physics --seed 7
 ```
 
 This is an alpha research result, not a claim that general causal ontology discovery
