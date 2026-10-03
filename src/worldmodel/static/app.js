@@ -815,7 +815,7 @@ async function answerQuestion(question) {
 async function askRook(question) {
   const clean = question.trim();
   if (!clean) return;
-  if (state.loading) {
+  if (state.loading && !(state.context === 'custom' && state.customData)) {
     toast('Rook is still preparing the current world.');
     return;
   }
