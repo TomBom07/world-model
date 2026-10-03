@@ -3,70 +3,110 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#090a0d" />
-  <title>Rook — WorldModel</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23090a0d'/%3E%3Cpath d='M18 17h7v7h7v-7h7v7h7v9l-5 5v10H23V38l-5-5V17Z' fill='white'/%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#0b0c0f" />
+  <title>Rook</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b0c0f'/%3E%3Cpath d='M18 17h7v7h7v-7h7v7h7v9l-5 5v10H23V38l-5-5V17Z' fill='white'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand-row">
-        <div class="rook-mark" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
-        <div>
-          <strong>Rook</strong>
-          <small>WorldModel</small>
-        </div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <button class="brand-button" id="brand-home" aria-label="Rook home">
+          <span class="rook-logo" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Rook</span>
+        </button>
+        <button class="icon-button sidebar-close" id="sidebar-close" aria-label="Close sidebar">×</button>
       </div>
 
-      <nav class="nav" aria-label="Workspace">
-        <button class="nav-item active" data-view="copilot">
-          <span class="nav-icon">✦</span><span>Ask Rook</span>
+      <button class="new-chat" id="new-chat">
+        <span>＋</span>
+        <span>New chat</span>
+      </button>
+
+      <nav class="context-nav" aria-label="Worlds">
+        <p class="nav-label">Worlds</p>
+        <button class="context-item active" data-context="market">
+          <span class="context-icon">◌</span>
+          <span>
+            <strong>Market</strong>
+            <small>Competing mechanisms</small>
+          </span>
         </button>
-        <button class="nav-item" data-view="home">
-          <span class="nav-icon">⌂</span><span>Overview</span>
+        <button class="context-item" data-context="physics">
+          <span class="context-icon">∿</span>
+          <span>
+            <strong>Physics</strong>
+            <small>Hidden laws</small>
+          </span>
         </button>
-        <button class="nav-item" data-view="market">
-          <span class="nav-icon">◫</span><span>Market world</span>
+        <button class="context-item" data-context="discovery">
+          <span class="context-icon">✦</span>
+          <span>
+            <strong>Discovery</strong>
+            <small>Theory invention</small>
+          </span>
         </button>
-        <button class="nav-item" data-view="physics">
-          <span class="nav-icon">∿</span><span>Physics world</span>
-        </button>
-        <button class="nav-item" data-view="discoveries">
-          <span class="nav-icon">✦</span><span>Discoveries</span>
-        </button>
-        <button class="nav-item" data-view="validation">
-          <span class="nav-icon">✓</span><span>Validation</span>
-        </button>
-        <div class="nav-divider"></div>
-        <button class="nav-item" data-view="advanced">
-          <span class="nav-icon">⌘</span><span>Lab details</span>
+        <button class="context-item" data-context="validation">
+          <span class="context-icon">✓</span>
+          <span>
+            <strong>Validation</strong>
+            <small>Seals & holdout</small>
+          </span>
         </button>
       </nav>
 
-      <div class="sidebar-bottom">
-        <div class="engine-status">
-          <span class="status-dot"></span>
-          <div>
-            <strong id="engine-label">Rook ready</strong>
-            <small id="engine-sub">Waiting for analysis</small>
-          </div>
+      <section class="recent-section">
+        <div class="recent-head">
+          <p class="nav-label">Recent</p>
+          <button class="tiny-button" id="clear-history">Clear</button>
         </div>
-        <button class="text-button" id="open-guide">How to use Rook</button>
+        <div class="recent-list" id="recent-list"></div>
+      </section>
+
+      <div class="sidebar-bottom">
+        <button class="sidebar-action" id="open-lab">
+          <span>⌘</span><span>Lab details</span>
+        </button>
+        <button class="sidebar-action" id="open-help">
+          <span>?</span><span>How Rook works</span>
+        </button>
+        <div class="runtime-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="runtime-status">Starting Rook…</span>
+        </div>
       </div>
     </aside>
 
-    <div class="workspace">
-      <header class="workspace-topbar">
-        <div>
-          <p class="breadcrumb">WORLD LAB / <span id="view-label">ASK ROOK</span></p>
-          <h1 id="page-title">Reason with the world model.</h1>
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menu-button" aria-label="Open sidebar">☰</button>
+
+        <button class="world-switcher" id="world-switcher" aria-haspopup="listbox" aria-expanded="false">
+          <span id="world-name">Market</span>
+          <span class="chevron">⌄</span>
+        </button>
+
+        <div class="topbar-actions">
+          <span class="run-status" id="run-status">Loading world…</span>
+          <button class="icon-button" id="new-chat-top" aria-label="New chat">＋</button>
+          <button class="icon-button" id="more-button" aria-label="Settings">•••</button>
         </div>
-        <div class="run-controls">
-          <label class="compact-field">
-            <span>Target</span>
+
+        <div class="world-menu popover" id="world-menu" role="listbox">
+          <button data-context="market"><span>◌</span><div><strong>Market</strong><small>Distinguish belief vs liquidity mechanisms</small></div></button>
+          <button data-context="physics"><span>∿</span><div><strong>Physics</strong><small>Identify a hidden resistance law</small></div></button>
+          <button data-context="discovery"><span>✦</span><div><strong>Discovery</strong><small>Reject and invent theories</small></div></button>
+          <button data-context="validation"><span>✓</span><div><strong>Validation</strong><small>Inspect seals and holdout integrity</small></div></button>
+        </div>
+
+        <div class="settings-menu popover" id="settings-menu">
+          <label>
+            <span>Seed</span>
+            <input id="seed" type="number" min="0" value="7" />
+          </label>
+          <label>
+            <span>Symbolic target</span>
             <select id="target">
               <option value="growth_equity">Growth equity</option>
               <option value="value_equity">Value equity</option>
@@ -76,554 +116,85 @@
               <option value="volatility">Volatility</option>
             </select>
           </label>
-          <label class="compact-field seed-field">
-            <span>Seed</span>
-            <input id="seed" type="number" value="7" min="0" />
-          </label>
-          <button class="primary-button" id="run">
-            <span>Run analysis</span><span class="button-arrow">↗</span>
-          </button>
+          <button id="rerun-analysis">Re-run current world</button>
         </div>
       </header>
 
-      <main class="content">
-        <section class="view active" id="view-copilot">
-          <div class="copilot-shell">
-            <section class="copilot-main">
-              <div class="copilot-intro">
-                <div class="badge-row">
-                  <span class="badge soft">Rook copilot</span>
-                  <span class="badge status-badge" id="copilot-status">Loading world state…</span>
-                </div>
-                <h2>Ask the model what it thinks is true.</h2>
-                <p>
-                  Rook answers from the current experiment state: competing mechanisms,
-                  posterior beliefs, proposed falsification tests, invented theories, and sealed evidence.
-                </p>
+      <section class="chat-page">
+        <div class="welcome" id="welcome">
+          <div class="welcome-mark"><span class="rook-logo large" aria-hidden="true"><i></i><i></i><i></i></span></div>
+          <p class="eyebrow" id="welcome-kicker">MARKET WORLD</p>
+          <h1 id="welcome-title">What do you want to understand?</h1>
+          <p class="welcome-copy" id="welcome-copy">
+            Rook keeps competing explanations alive, finds where they disagree, and tells you what evidence would change the conclusion.
+          </p>
+          <div class="starter-grid" id="starter-grid"></div>
+          <button class="learn-link" id="learn-link">How is this different from normal AI? →</button>
+        </div>
+
+        <div class="conversation" id="conversation" aria-live="polite"></div>
+
+        <div class="composer-wrap">
+          <form class="composer" id="ask-form">
+            <textarea id="ask-input" rows="1" placeholder="Ask Rook…" aria-label="Ask Rook"></textarea>
+            <div class="composer-footer">
+              <div class="composer-tools">
+                <button type="button" class="composer-tool" id="tool-button" aria-label="Open tools">＋</button>
+                <button type="button" class="composer-chip" id="quick-test">Run best test</button>
+                <button type="button" class="composer-chip" id="quick-why">Why?</button>
               </div>
-
-              <div class="suggestion-chips" id="question-chips">
-                <button data-question="What do you currently think is driving the market?">What is driving the market?</button>
-                <button data-question="Why do you believe that?">Why?</button>
-                <button data-question="What would change your mind?">What would change your mind?</button>
-                <button data-question="What did you discover that you were not given?">What did you discover?</button>
-                <button data-question="How do I know you are not cheating?">How do I know you didn't cheat?</button>
-              </div>
-
-              <div class="conversation" id="conversation" aria-live="polite">
-                <div class="message rook-message">
-                  <div class="message-avatar">R</div>
-                  <div class="message-body">
-                    <span class="message-role">Rook</span>
-                    <p>I’m loading the current research world. Once ready, ask me what I believe, why, what would falsify it, or explore a counterfactual on the right.</p>
-                  </div>
-                </div>
-              </div>
-
-              <form class="ask-box" id="ask-form">
-                <textarea id="ask-input" rows="1" placeholder="Ask Rook about the current world…" aria-label="Ask Rook"></textarea>
-                <div class="ask-footer">
-                  <span>Answers are grounded in this local experiment run.</span>
-                  <button class="ask-submit" type="submit" aria-label="Send question">↑</button>
-                </div>
-              </form>
-            </section>
-
-            <aside class="copilot-side">
-              <section class="world-card">
-                <div class="side-head">
-                  <div>
-                    <span class="step-tag">CURRENT WORLD</span>
-                    <h3>Competing explanations</h3>
-                  </div>
-                  <span class="mini-pill green" id="copilot-confidence">—</span>
-                </div>
-
-                <div class="theory-map">
-                  <div class="theory-node" id="copilot-theory-a">
-                    <span>World A</span>
-                    <strong>Belief reflexive</strong>
-                    <small id="copilot-theory-a-p">—</small>
-                  </div>
-                  <div class="theory-connector">
-                    <span>evidence</span>
-                    <i></i>
-                  </div>
-                  <div class="theory-node" id="copilot-theory-b">
-                    <span>World B</span>
-                    <strong>Liquidity reflexive</strong>
-                    <small id="copilot-theory-b-p">—</small>
-                  </div>
-                </div>
-
-                <div class="current-test">
-                  <span class="field-label">Best next discriminator</span>
-                  <strong id="copilot-best-test">—</strong>
-                  <small id="copilot-best-test-sub">Finding the highest-information event…</small>
-                </div>
-              </section>
-
-              <section class="world-card scenario-lab">
-                <div class="side-head">
-                  <div>
-                    <span class="step-tag">WHAT-IF LAB</span>
-                    <h3>Stress both worlds</h3>
-                  </div>
-                  <span class="mini-pill" id="scenario-info">—</span>
-                </div>
-                <p class="side-copy">
-                  Choose a hypothetical naturally occurring event. Rook recomputes how each candidate world says the assets should react.
-                </p>
-
-                <div class="scenario-controls">
-                  <label>
-                    <span>Event</span>
-                    <select id="scenario-event">
-                      <option value="growth">Growth</option>
-                      <option value="inflation">Inflation</option>
-                      <option value="liquidity" selected>Liquidity</option>
-                      <option value="policy">Policy</option>
-                      <option value="sentiment">Sentiment</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Shock</span>
-                    <div class="range-row">
-                      <input id="scenario-magnitude" type="range" min="-4" max="4" step="0.5" value="-2" />
-                      <output id="scenario-magnitude-label">-2.0σ</output>
-                    </div>
-                  </label>
-                  <button class="secondary-button" id="run-scenario" type="button">Run counterfactual</button>
-                </div>
-
-                <div class="scenario-result" id="scenario-result">
-                  <div class="scenario-placeholder">Run a counterfactual to compare reaction fingerprints.</div>
-                </div>
-              </section>
-
-              <div class="side-boundary">
-                Controlled synthetic world. Counterfactuals are research diagnostics, not trading signals.
-              </div>
-            </aside>
-          </div>
-        </section>
-
-        <section class="view" id="view-home">
-          <div class="hero-card">
-            <div class="hero-copy">
-              <div class="badge-row">
-                <span class="badge soft">Rook research workspace</span>
-                <span class="badge status-badge" id="hero-status">Loading current world…</span>
-              </div>
-              <h2>What kind of world are we actually in?</h2>
-              <p>
-                Rook keeps multiple explanations alive, looks for where they disagree,
-                and tells you what evidence would separate them. Start with the conclusion,
-                then drill down only if you want the math.
-              </p>
+              <button class="send-button" type="submit" aria-label="Send">↑</button>
             </div>
-            <div class="loop-visual" aria-label="Rook discovery loop">
-              <div class="loop-step active"><span>01</span><b>Observe</b><small>What happened?</small></div>
-              <div class="loop-arrow">→</div>
-              <div class="loop-step"><span>02</span><b>Compete</b><small>What could explain it?</small></div>
-              <div class="loop-arrow">→</div>
-              <div class="loop-step"><span>03</span><b>Test</b><small>Where do theories disagree?</small></div>
-              <div class="loop-arrow">→</div>
-              <div class="loop-step"><span>04</span><b>Update</b><small>Which world survived?</small></div>
-            </div>
-          </div>
-
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">START HERE</p>
-              <h3>Four useful questions</h3>
-            </div>
-            <p>Each card opens the relevant evidence instead of dumping the whole research stack at once.</p>
-          </div>
-
-          <div class="question-grid">
-            <button class="question-card" data-go="market">
-              <span class="question-index">01</span>
-              <strong>What does Rook think is driving the market?</strong>
-              <p>Compare belief-driven and liquidity-driven explanations.</p>
-              <span class="question-link">Open world model →</span>
-            </button>
-            <button class="question-card" data-go="market" data-focus="experiment">
-              <span class="question-index">02</span>
-              <strong>What evidence would distinguish the theories?</strong>
-              <p>See the next event Rook would choose because the worlds disagree there.</p>
-              <span class="question-link">See best test →</span>
-            </button>
-            <button class="question-card" data-go="discoveries">
-              <span class="question-index">03</span>
-              <strong>Can Rook invent a theory it wasn't given?</strong>
-              <p>Inspect open-world rejection and symbolic theory invention.</p>
-              <span class="question-link">See discovery →</span>
-            </button>
-            <button class="question-card" data-go="validation">
-              <span class="question-index">04</span>
-              <strong>How do I know it isn't cheating?</strong>
-              <p>Check leakage guards, sealed predictions, and held-out evaluation.</p>
-              <span class="question-link">Inspect validation →</span>
-            </button>
-          </div>
-
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">CURRENT RUN</p>
-              <h3>The answer before the details</h3>
-            </div>
-          </div>
-
-          <div class="summary-grid">
-            <article class="summary-card accent-card">
-              <div class="card-kicker">Current market read</div>
-              <div class="big-answer" id="home-world">—</div>
-              <p id="home-world-copy">Loading competing market worlds…</p>
-              <div class="confidence-row">
-                <span>Confidence</span>
-                <strong id="home-world-confidence">—</strong>
-              </div>
-              <div class="confidence-track"><i id="home-world-bar"></i></div>
-            </article>
-
-            <article class="summary-card">
-              <div class="card-kicker">Best next test</div>
-              <div class="big-answer compact" id="home-test">—</div>
-              <p id="home-test-copy">Finding the observation with the highest information value…</p>
-              <button class="inline-action" data-go="market" data-focus="experiment">Why this test? →</button>
-            </article>
-
-            <article class="summary-card">
-              <div class="card-kicker">Theory status</div>
-              <div class="big-answer compact" id="home-theory">—</div>
-              <p id="home-theory-copy">Checking whether the current theory family is incomplete…</p>
-              <button class="inline-action" data-go="discoveries">See what Rook invented →</button>
-            </article>
-          </div>
-
-          <div class="plain-note">
-            <span class="note-icon">i</span>
-            <p><strong>Important:</strong> this interface is currently showing controlled research worlds. It proves the discovery machinery can work when hidden truth is known to the evaluator; it is not yet a claim of real-market alpha or a new law of nature.</p>
-          </div>
-        </section>
-
-        <section class="view" id="view-market">
-          <div class="world-header">
-            <div>
-              <p class="eyebrow">MARKET WORLD</p>
-              <h2>Two stories fit the same tape.</h2>
-              <p>Rook's job is not to pick the prettier story. It chooses evidence that should make the stories react differently.</p>
-            </div>
-            <div class="world-verdict">
-              <span>Current read</span>
-              <strong id="market-verdict">—</strong>
-              <small id="market-verdict-sub">Loading posterior…</small>
-            </div>
-          </div>
-
-          <div class="market-layout">
-            <article class="panel large-panel">
-              <div class="panel-title">
-                <div>
-                  <span class="step-tag">1 · OBSERVE</span>
-                  <h3>Why passive history is not enough</h3>
-                </div>
-                <span class="mini-pill" id="market-correlation">—</span>
-              </div>
-              <p class="panel-intro">Both hidden worlds produce almost the same visible path. A normal fit can look good while the explanation is wrong.</p>
-              <div class="chart-shell">
-                <svg id="market-chart" viewBox="0 0 760 260" preserveAspectRatio="none"></svg>
-              </div>
-              <div class="legend-row">
-                <span><i class="legend-line theory-a"></i> belief-reflexive world</span>
-                <span><i class="legend-line theory-b"></i> liquidity-reflexive world</span>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-title">
-                <div>
-                  <span class="step-tag">2 · COMPETE</span>
-                  <h3>Which explanation survived?</h3>
-                </div>
-              </div>
-              <div class="posterior-stack" id="market-posterior"></div>
-              <div class="explain-box" id="market-explanation"></div>
-            </article>
-          </div>
-
-          <article class="panel experiment-panel" id="market-experiment">
-            <div class="panel-title">
-              <div>
-                <span class="step-tag">3 · TEST</span>
-                <h3>What should we observe next?</h3>
-              </div>
-              <span class="mini-pill green" id="market-info-score">—</span>
-            </div>
-            <div class="experiment-grid">
-              <div>
-                <span class="field-label">Highest-information event</span>
-                <div class="experiment-name" id="market-probe-name">—</div>
-                <p id="market-probe-copy">Rook simulates every candidate event under both theories and chooses the one where predicted reactions separate most.</p>
-              </div>
-              <div class="why-list" id="market-why-test"></div>
-            </div>
-          </article>
-
-          <article class="panel update-panel">
-            <div class="panel-title">
-              <div>
-                <span class="step-tag">4 · UPDATE</span>
-                <h3>What changed after the diagnostic evidence?</h3>
-              </div>
-            </div>
-            <div class="update-grid">
-              <div class="stat-box"><span>True-world posterior</span><strong id="market-true-posterior">—</strong></div>
-              <div class="stat-box"><span>Entropy removed</span><strong id="market-entropy">—</strong></div>
-              <div class="stat-box"><span>Active vs random</span><strong id="market-active-edge">—</strong></div>
-            </div>
-          </article>
-
-          <details class="technical-card">
-            <summary><span>Technical details</span><small>Higher-order beliefs, hidden mechanics, benchmark metrics</small></summary>
-            <div class="technical-body">
-              <div class="tech-grid" id="market-tech-grid"></div>
-            </div>
-          </details>
-        </section>
-
-        <section class="view" id="view-physics">
-          <div class="world-header">
-            <div>
-              <p class="eyebrow">PHYSICS WORLD</p>
-              <h2>Same local motion. Different hidden law.</h2>
-              <p>Two drag laws are engineered to look identical around normal operation. Rook has to deliberately push the system where their curvature differs.</p>
-            </div>
-            <div class="world-verdict">
-              <span>Hidden law inferred</span>
-              <strong id="physics-verdict">—</strong>
-              <small id="physics-verdict-sub">Loading experiment…</small>
-            </div>
-          </div>
-
-          <div class="market-layout">
-            <article class="panel large-panel">
-              <div class="panel-title">
-                <div>
-                  <span class="step-tag">PASSIVE EVIDENCE</span>
-                  <h3>Almost indistinguishable motion</h3>
-                </div>
-                <span class="mini-pill" id="physics-correlation">—</span>
-              </div>
-              <div class="chart-shell">
-                <svg id="physics-chart" viewBox="0 0 760 260" preserveAspectRatio="none"></svg>
-              </div>
-              <div class="legend-row">
-                <span><i class="legend-line theory-a"></i> linear drag</span>
-                <span><i class="legend-line theory-b"></i> curved drag</span>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-title">
-                <div>
-                  <span class="step-tag">POSTERIOR</span>
-                  <h3>Which law survived?</h3>
-                </div>
-              </div>
-              <div class="posterior-stack" id="physics-posterior"></div>
-              <div class="explain-box" id="physics-explanation"></div>
-            </article>
-          </div>
-
-          <article class="panel experiment-panel">
-            <div class="panel-title">
-              <div>
-                <span class="step-tag">DIAGNOSTIC INTERVENTION</span>
-                <h3>Push where the laws disagree</h3>
-              </div>
-              <span class="mini-pill green" id="physics-info-score">—</span>
-            </div>
-            <div class="experiment-grid">
-              <div>
-                <span class="field-label">Selected probe</span>
-                <div class="experiment-name" id="physics-probe-name">—</div>
-                <p id="physics-probe-copy">Rook preregisters what both laws predict before observing the synthetic result.</p>
-              </div>
-              <div class="why-list" id="physics-why-test"></div>
-            </div>
-          </article>
-
-          <details class="technical-card">
-            <summary><span>Technical details</span><small>Equations, preregistration seal, active-vs-random benchmark</small></summary>
-            <div class="technical-body">
-              <div class="tech-grid" id="physics-tech-grid"></div>
-            </div>
-          </details>
-        </section>
-
-        <section class="view" id="view-discoveries">
-          <div class="world-header">
-            <div>
-              <p class="eyebrow">DISCOVERIES</p>
-              <h2>What did Rook discover instead of being told?</h2>
-              <p>This is the frontier suite translated into plain English. The raw checks still exist, but they are evidence for these four capabilities rather than the product itself.</p>
-            </div>
-            <div class="world-verdict">
-              <span>Frontier suite</span>
-              <strong id="frontier-score">—</strong>
-              <small id="frontier-score-sub">Loading gates…</small>
-            </div>
-          </div>
-
-          <div class="discovery-grid">
-            <article class="discovery-card">
-              <span class="discovery-number">01</span>
-              <div class="discovery-icon">◇</div>
-              <h3>Find the hidden variables that matter</h3>
-              <p>Instead of accepting a human-given representation, Rook searches for latent coordinates that move consistently with interventions.</p>
-              <div class="discovery-result" id="latent-result">—</div>
-              <details><summary>What does “ontology” mean?</summary><p>An ontology is simply the set of variables/concepts the model believes are worth tracking. Here, Rook tries to infer those variables rather than receiving them by hand.</p></details>
-            </article>
-
-            <article class="discovery-card">
-              <span class="discovery-number">02</span>
-              <div class="discovery-icon">⌁</div>
-              <h3>Notice when the environment changes</h3>
-              <p>Rook groups periods with different statistical behavior into candidate natural experiments without receiving the regime labels.</p>
-              <div class="discovery-result" id="regime-result">—</div>
-              <details><summary>Why does this matter?</summary><p>A mechanism that only works in one regime is not a general explanation. Environment changes create opportunities to falsify it.</p></details>
-            </article>
-
-            <article class="discovery-card featured-discovery">
-              <span class="discovery-number">03</span>
-              <div class="discovery-icon">✦</div>
-              <h3>Reject the theories it was given — then invent a new one</h3>
-              <p>If none of the known mechanisms explain the evidence, Rook can assign probability to “unknown” and search residual structure for a better symbolic theory.</p>
-              <div class="discovery-result" id="theory-result">—</div>
-              <div class="equation-box" id="invented-equation">—</div>
-            </article>
-
-            <article class="discovery-card">
-              <span class="discovery-number">04</span>
-              <div class="discovery-icon">↔</div>
-              <h3>Change its own concepts</h3>
-              <p>When one latent variable contains two distinct behaviors, Rook can suggest a split; when two concepts collapse onto the same behavior, it can suggest a merge.</p>
-              <div class="discovery-result" id="evolution-result">—</div>
-              <details><summary>Is that autonomous science?</summary><p>Not yet. These are controlled benchmarks with known hidden structure. The real test is whether the same machinery survives frozen prospective real-world experiments.</p></details>
-            </article>
-          </div>
-
-          <details class="technical-card">
-            <summary><span>All V4 falsification gates</span><small>Raw pass/fail checks and metrics</small></summary>
-            <div class="technical-body">
-              <div class="check-grid" id="frontier-checks"></div>
-            </div>
-          </details>
-        </section>
-
-        <section class="view" id="view-validation">
-          <div class="world-header">
-            <div>
-              <p class="eyebrow">VALIDATION</p>
-              <h2>Make it hard for ourselves to cheat.</h2>
-              <p>Good-looking backtests are easy to manufacture. Rook freezes what was known, seals forecasts before outcomes are revealed, and evaluates every model under the same chronology.</p>
-            </div>
-            <div class="world-verdict">
-              <span>Experiment integrity</span>
-              <strong id="validation-verdict">—</strong>
-              <small id="validation-verdict-sub">Checking seals…</small>
-            </div>
-          </div>
-
-          <div class="validation-steps">
-            <article><span>01</span><strong>Freeze</strong><p>Lock the dataset schema, model config, and train/evaluation boundary.</p></article>
-            <article><span>02</span><strong>Redact</strong><p>Give the model only features that existed at forecast time.</p></article>
-            <article><span>03</span><strong>Seal</strong><p>Hash each forecast before the corresponding outcome is read.</p></article>
-            <article><span>04</span><strong>Score</strong><p>Compare Rook and baselines on the same untouched holdout.</p></article>
-          </div>
-
-          <div class="validation-grid">
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">AUDIT</span><h3>Did anything leak from the future?</h3></div></div>
-              <div class="audit-answer" id="leakage-answer">—</div>
-              <div class="audit-list" id="audit-list"></div>
-            </article>
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">SEALED REPLAY</span><h3>Frozen benchmark</h3></div></div>
-              <div class="benchmark-table-wrap">
-                <table class="benchmark-table">
-                  <thead><tr><th>Model</th><th>MAE</th><th>Direction</th><th>80% cover</th></tr></thead>
-                  <tbody id="validation-table"></tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-
-          <div class="plain-note">
-            <span class="note-icon">!</span>
-            <p id="validation-boundary">A sealed historical replay reduces look-ahead and tuning risk, but it does not prove causality or live trading alpha.</p>
-          </div>
-        </section>
-
-        <section class="view" id="view-advanced">
-          <div class="world-header">
-            <div>
-              <p class="eyebrow">LAB DETAILS</p>
-              <h2>The machinery underneath Rook.</h2>
-              <p>This is where the research metrics belong. Use this view when you want to inspect whether the system really passed its benchmarks, not when you just want the answer.</p>
-            </div>
-          </div>
-
-          <div class="diagnostic-strip">
-            <div><span>API</span><strong id="diag-api">checking</strong></div>
-            <div><span>V4</span><strong id="diag-v4">checking</strong></div>
-            <div><span>Physics</span><strong id="diag-physics">checking</strong></div>
-            <div><span>Seals</span><strong id="diag-seals">checking</strong></div>
-          </div>
-
-          <div class="advanced-grid">
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">V4</span><h3>Cross-domain ontology recovery</h3></div></div>
-              <div id="advanced-domains" class="tech-grid"></div>
-            </article>
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">SYMBOLIC</span><h3>Latent laws</h3></div></div>
-              <div id="advanced-laws" class="code-stack"></div>
-            </article>
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">COMPILER</span><h3>Recovered mechanism</h3></div></div>
-              <div class="equation-box large-equation" id="advanced-program">—</div>
-              <div class="audit-list" id="advanced-compiler"></div>
-            </article>
-            <article class="panel">
-              <div class="panel-title"><div><span class="step-tag">OBJECTIVE</span><h3>Falsifiable compression</h3></div></div>
-              <div class="audit-list" id="advanced-objective"></div>
-            </article>
-          </div>
-        </section>
-      </main>
-    </div>
+          </form>
+          <p class="boundary" id="composer-boundary">Controlled research world · not a trading signal</p>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <dialog id="guide-dialog">
-    <form method="dialog" class="guide-card">
-      <div class="guide-head">
+  <div class="scrim" id="scrim"></div>
+
+  <aside class="sheet" id="tool-sheet" aria-hidden="true">
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow" id="tool-kicker">EXPERIMENT</p>
+        <h2 id="tool-title">Run a counterfactual</h2>
+      </div>
+      <button class="icon-button" data-close-sheet>×</button>
+    </div>
+    <div class="sheet-body" id="tool-body"></div>
+  </aside>
+
+  <aside class="sheet wide" id="lab-sheet" aria-hidden="true">
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow">LAB DETAILS</p>
+        <h2>Evidence behind the answer</h2>
+      </div>
+      <button class="icon-button" data-close-sheet>×</button>
+    </div>
+    <div class="sheet-body" id="lab-body"></div>
+  </aside>
+
+  <dialog id="help-dialog">
+    <form method="dialog" class="help-card">
+      <div class="help-head">
         <div>
-          <p class="eyebrow">60-SECOND GUIDE</p>
-          <h2>How to use Rook</h2>
+          <p class="eyebrow">ROOK IN 30 SECONDS</p>
+          <h2>It reasons with competing worlds.</h2>
         </div>
-        <button class="close-button" value="close" aria-label="Close">×</button>
+        <button class="icon-button" value="close">×</button>
       </div>
-      <div class="guide-steps">
-        <div><span>1</span><div><strong>Choose a target</strong><p>The target changes the symbolic V0 experiment. The strategic market and physics research worlds run alongside it.</p></div></div>
-        <div><span>2</span><div><strong>Read the conclusion first</strong><p>Overview tells you what Rook currently believes, how confident it is, and the best next observation.</p></div></div>
-        <div><span>3</span><div><strong>Open the world you care about</strong><p>Market and Physics show the core loop: observe → competing explanations → diagnostic test → update.</p></div></div>
-        <div><span>4</span><div><strong>Use Discoveries for the ambitious part</strong><p>This is where Rook tests latent-variable discovery, theory invention, ontology changes, and prospective falsification.</p></div></div>
-        <div><span>5</span><div><strong>Use Lab details only when needed</strong><p>Raw R², seals, equations, and pass/fail gates are evidence for the result — not the primary experience.</p></div></div>
+      <div class="help-flow">
+        <div><span>1</span><div><strong>Observe</strong><p>Start with evidence that multiple explanations may fit.</p></div></div>
+        <div><span>2</span><div><strong>Compete</strong><p>Keep several executable explanations alive instead of forcing one answer.</p></div></div>
+        <div><span>3</span><div><strong>Test</strong><p>Find the observation or intervention where those explanations disagree most.</p></div></div>
+        <div><span>4</span><div><strong>Update</strong><p>Use the result to change belief, reject a theory, or invent a better one.</p></div></div>
       </div>
-      <button class="primary-button full-width" value="close">Got it</button>
+      <div class="help-note">
+        The current app uses controlled synthetic worlds so hidden truth is known to the evaluator. That makes mechanism recovery measurable, but it is not yet proof of real-world discovery or market alpha.
+      </div>
+      <button class="primary-dialog-button" value="close">Got it</button>
     </form>
   </dialog>
 
