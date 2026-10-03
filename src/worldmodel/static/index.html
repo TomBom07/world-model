@@ -13,9 +13,9 @@
     <div class="brand">
       <span class="orb"></span>
       <span>WorldModel</span>
-      <span class="tag">RMC V1</span>
+      <span class="tag">RMC V2</span>
     </div>
-    <div class="status"><span class="pulse"></span> strategic world lab</div>
+    <div class="status"><span class="pulse"></span> sealed world lab</div>
   </header>
 
   <main>
@@ -123,6 +123,58 @@
           Both methods receive one reaction fingerprint. The difference is whether the
           event was selected to maximally separate the competing world models.
         </p>
+      </article>
+    </section>
+
+
+    <section class="foundation-head">
+      <p class="eyebrow">PHASE 2 / SEALED REPLAY</p>
+      <h2>Prove the model did not peek.</h2>
+      <p class="muted">
+        Freeze the data contract, model configuration and train/evaluation boundary,
+        seal every prediction before revealing the outcome, then compare every model
+        under the exact same chronology.
+      </p>
+    </section>
+
+    <section class="metrics" id="sealed-metrics"></section>
+
+    <section class="grid two">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">CRYPTOGRAPHIC AUDIT</p>
+            <h2>Immutable experiment manifest</h2>
+          </div>
+          <span id="seal-pill" class="pill"></span>
+        </div>
+        <div id="manifest-hash" class="program">Sealing experiment…</div>
+        <div id="seal-audit" class="ontology"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">FROZEN BASELINE SHOOTOUT</p>
+            <h2>Same holdout. Same rules.</h2>
+          </div>
+          <span class="pill neutral">historical-shaped synthetic</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>MAE</th>
+                <th>RMSE</th>
+                <th>Direction</th>
+                <th>80% cover</th>
+              </tr>
+            </thead>
+            <tbody id="sealed-benchmark"></tbody>
+          </table>
+        </div>
+        <p id="sealed-boundary" class="muted section-gap"></p>
       </article>
     </section>
 
