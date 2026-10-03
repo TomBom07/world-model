@@ -103,9 +103,21 @@ class SealedHistoricalRunner:
             "event_families": sorted({row.family for row in self.dataset.records}),
             "record_count": len(self.dataset.records),
         }
+        dataset_payload = [
+            {
+                "event_id": row.event_id,
+                "family": row.family,
+                "event_at": row.event_at,
+                "features": dict(row.features),
+                "feature_available_at": dict(row.feature_available_at),
+                "outcomes": dict(row.outcomes),
+            }
+            for row in self.dataset.records
+        ]
         manifest = SealedManifest.create(
             self.spec,
             dataset_schema=schema,
+            dataset_payload=dataset_payload,
             code_ref=self.code_ref,
             created_at=self.spec.evaluation_start,
         )
