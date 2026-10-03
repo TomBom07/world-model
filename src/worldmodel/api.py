@@ -7,15 +7,20 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .breakthrough_engine import BreakthroughResearchEngine
 from .engine import ResearchEngine
+from .frontier_engine import FrontierResearchEngine
 from .historical_engine import HistoricalResearchEngine
 from .strategic_engine import StrategicResearchEngine
 
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.3.0",
-    description="Reflexive Mechanism Compilation, active identification and sealed historical replay.",
+    version="0.5.0",
+    description=(
+        "Executable mechanism discovery, active falsification, causal ontology learning, "
+        "open-world theory invention and sealed evaluation."
+    ),
 )
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -37,6 +42,16 @@ def _cached_sealed(seed: int, observations: int):
     return HistoricalResearchEngine(seed=seed).run_demo(n=observations)
 
 
+@lru_cache(maxsize=16)
+def _cached_breakthrough(seed: int):
+    return BreakthroughResearchEngine(seed=seed).run()
+
+
+@lru_cache(maxsize=16)
+def _cached_frontier(seed: int):
+    return FrontierResearchEngine(seed=seed).run()
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -44,7 +59,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v2"}
+    return {"status": "ok", "engine": "openmechanism-v4", "version": "0.5.0"}
 
 
 @app.get("/api/demo")
@@ -73,3 +88,13 @@ def sealed(
     observations: int = Query(120, ge=64, le=500),
 ):
     return _cached_sealed(seed, observations)
+
+
+@app.get("/api/breakthrough")
+def breakthrough(seed: int = Query(7, ge=0, le=1_000_000)):
+    return _cached_breakthrough(seed)
+
+
+@app.get("/api/frontier")
+def frontier(seed: int = Query(7, ge=0, le=1_000_000)):
+    return _cached_frontier(seed)
