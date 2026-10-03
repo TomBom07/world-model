@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .engine import ResearchEngine
 from .historical_engine import HistoricalResearchEngine
+from .physics_engine import PhysicsDiscoveryEngine
 from .strategic_engine import StrategicResearchEngine
 
 
@@ -35,6 +36,11 @@ def _cached_strategic(seed: int, observations: int):
 @lru_cache(maxsize=32)
 def _cached_sealed(seed: int, observations: int):
     return HistoricalResearchEngine(seed=seed).run_demo(n=observations)
+
+
+@lru_cache(maxsize=32)
+def _cached_physics(seed: int, observations: int):
+    return PhysicsDiscoveryEngine(seed=seed).run_demo(n=observations)
 
 
 @app.get("/")
@@ -73,3 +79,11 @@ def sealed(
     observations: int = Query(120, ge=64, le=500),
 ):
     return _cached_sealed(seed, observations)
+
+
+@app.get("/api/physics")
+def physics(
+    seed: int = Query(7, ge=0, le=1_000_000),
+    observations: int = Query(240, ge=180, le=600),
+):
+    return _cached_physics(seed, observations)
