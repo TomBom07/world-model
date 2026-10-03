@@ -1431,3 +1431,104 @@ dialog::backdrop {
   font-size: 8px;
   line-height: 1.45;
 }
+
+
+/* Local Ollama */
+.ai-status-pill {
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-2);
+  background: rgba(255,255,255,.015);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.ai-status-pill.online {
+  color: var(--green);
+  border-color: rgba(140,231,172,.16);
+  background: rgba(140,231,172,.035);
+}
+
+.ai-status-pill.offline {
+  color: #7d838d;
+}
+
+.settings-divider {
+  height: 1px;
+  margin: 4px 0 12px;
+  background: var(--line);
+}
+
+.ai-setting-head {
+  min-height: 22px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-setting-head > span {
+  color: var(--muted-2);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ai-setting-head strong {
+  color: #9ba1aa;
+  font-size: 8px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.ai-setting-head strong.online { color: var(--green); }
+
+.settings-menu label.toggle-row {
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #ecece8;
+}
+
+.settings-menu > button.settings-secondary {
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: #b9bec6;
+  font-weight: 600;
+}
+
+.settings-menu > button.settings-secondary:hover {
+  background: rgba(255,255,255,.035);
+}
+
+.inline-code {
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 5px;
+  background: rgba(255,255,255,.035);
+  padding: 1px 4px;
+  font: .9em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.local-ai-note {
+  margin-top: 9px;
+  color: var(--muted-2);
+  font-size: 8px;
+}
+
+@media (max-width: 620px) {
+  .ai-status-pill { display: none; }
+}
