@@ -161,9 +161,6 @@ Run it with:
 ```bash
 worldmodel breakthrough --seed 7
 worldmodel physics --seed 7
-worldmodel frontier --seed 7
-worldmodel doctor --seed 7
-worldmodel physics --seed 7
 ```
 
 This is an alpha research result, not a claim that general causal ontology discovery
@@ -295,6 +292,9 @@ worldmodel demo
 worldmodel strategic
 worldmodel sealed
 worldmodel breakthrough --seed 7
+worldmodel physics --seed 7
+worldmodel frontier --seed 7
+worldmodel doctor --seed 7
 worldmodel fred-fed --output data/fed-target-events.csv --start 1994-01-01
 worldmodel fred-evaluate --input data/fed-target-events.csv --training-end 2019-12-31T23:59:59+00:00 --evaluation-start 2020-01-01T00:00:00+00:00 --evaluation-end 2025-12-31T23:59:59+00:00 --report reports/fed-sealed.json
 worldmodel serve --reload

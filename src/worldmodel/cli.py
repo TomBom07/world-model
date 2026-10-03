@@ -211,6 +211,8 @@ def main() -> None:
             target=getattr(args, "target", "growth_equity"),
         )
     print(json.dumps(result, indent=2, default=str))
+    if args.command == "doctor" and result["status"] != "ok":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
