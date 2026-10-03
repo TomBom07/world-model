@@ -1,71 +1,140 @@
 # WorldModel — Reflexive Mechanism Compiler
 
-> **Research prototype:** infer the smallest executable mechanism that explains how a changing world updates itself.
+> Infer the smallest executable mechanism that explains how a changing world updates itself — then actively seek the observation that can disprove it.
 
-WorldModel is not a stock-prediction bot. V0 asks a more basic and falsifiable question:
+WorldModel is a research lab, not a stock-prediction bot. The project asks whether a machine can recover hidden mechanisms in a reflexive world, notice when its explanation breaks, model beliefs about beliefs, and choose the next observation that is most informative.
 
-**Can we recover a hidden, changing causal-ish mechanism from sparse observations, detect when that mechanism stops working, and identify conclusions that survive uncertainty across multiple plausible models?**
+## V1: strategic hidden worlds
 
-The first environment is a synthetic reflexive market because its hidden rules are known to the evaluator. That lets us test mechanism recovery without fooling ourselves with a pretty historical backtest.
+V1 makes the problem deliberately harder.
 
-## What V0 implements
+Two synthetic markets can produce **nearly indistinguishable ordinary price histories** while being driven by different hidden mechanisms:
 
-- **Mechanism compiler** — beam-searches a compact symbolic language of primitives, interactions and nonlinear terms, fitting executable programs instead of one opaque model.
-- **Description-length selection** — balances predictive fit against program complexity.
-- **Model population** — retains multiple plausible mechanisms with posterior-like weights instead of pretending one explanation is certainly true.
-- **Regime-break detector** — notices when an old world model begins producing structurally larger errors.
-- **Ontology-break search** — inspects residual structure for omitted interactions that may represent a missing concept.
-- **Belief tomography** — compresses cross-asset reaction fingerprints into latent factors.
-- **Prediction invariants** — reports conclusions shared by most plausible mechanisms.
-- **Adversarial destroyer** — perturbs the inferred world and searches for conditions that flip the conclusion.
-- **Sample-efficiency benchmark** — compares RMC against linear Ridge, degree-2 polynomial Ridge and Random Forest inside a controlled structured world.
-- **Research dashboard** — an interactive local interface for rerunning worlds and inspecting what the compiler recovered.
+- **belief-reflexive world** — participants react strongly to what they believe other participants believe and will do;
+- **liquidity-reflexive world** — liquidity, leverage constraints, forced deleveraging and dealer hedging dominate.
+
+Both worlds contain six populations:
+
+```text
+fundamental funds
+macro funds
+momentum
+retail
+leveraged funds
+dealers
+```
+
+Each population has private first-order beliefs, estimates of the market's beliefs, a reaction rule and constraints.
+
+WorldModel then asks:
+
+> Which naturally occurring future event would cause these candidate worlds to react most differently?
+
+It pre-registers each world's cross-asset reaction fingerprint, waits for that diagnostic event in the synthetic environment, observes the reaction and updates the probability of each hidden mechanism.
+
+That is **active world identification**, not simply forecasting the next price.
+
+## Implemented
+
+### V0 — mechanism compilation
+
+- compact symbolic mechanism search
+- MDL-style complexity selection
+- population of plausible executable models
+- residual regime-break detection
+- ontology-break suggestions
+- belief tomography
+- prediction invariants
+- adversarial counterfactual testing
+- sample-efficiency baselines
+
+### V1 — reflexive strategic worlds
+
+- six heterogeneous market populations
+- private information and noisy beliefs
+- explicit second-order beliefs: beliefs about market consensus
+- dynamic leverage
+- margin / forced-deleveraging events
+- dealer gamma hedging
+- two observationally similar worlds with different hidden causes
+- cross-asset counterfactual reaction fingerprints
+- active diagnostic-event selection
+- Bayes-style hidden-mechanism updating
+- higher-order-belief compression
+- first-order vs first+second-order ablation
+- active-vs-random identification benchmark
+- interactive dashboard for inspecting the full experiment
 
 ## Architecture
 
 ```text
-observations / events
-        │
-        ▼
-reaction fingerprint ──► belief tomography
-        │
-        ▼
-mechanism compiler ──► population of executable programs
-        │                         │
-        │                         ├──► prediction invariants
-        │                         └──► adversarial destroyer
-        ▼
-residual stream
-        │
-        ├──► regime-break detector
-        └──► ontology-break suggestions
-                    │
-                    ▼
-              revised mechanism
+                    observations
+                         │
+          ┌──────────────┴──────────────┐
+          ▼                             ▼
+ symbolic mechanism compiler     strategic world models
+          │                             │
+          ▼                             ▼
+ competing executable models      belief / liquidity hypotheses
+          │                             │
+          ├── regime break              ├── first-order beliefs
+          ├── ontology break            ├── second-order beliefs
+          ├── invariants                ├── leverage / margin
+          └── destroyer                 └── dealer hedging
+                                          │
+                                          ▼
+                                  reaction fingerprints
+                                          │
+                                          ▼
+                                  ACTIVE IDENTIFIER
+                                          │
+                             "what should we observe next?"
+                                          │
+                                          ▼
+                                   posterior update
 ```
 
-The long-term target is a system that learns not only `world_t → world_t+1`, but also how the **update rule itself changes**:
+The long-term target is not merely:
+
+```text
+world_t → world_t+1
+```
+
+but:
 
 ```text
 (M_t, world_t) → (M_t+1, world_t+1)
 ```
 
+where the system also learns how the world's update rule itself changes.
+
 ## Run it
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
 pip install -e ".[dev]"
+
 pytest
 worldmodel demo
+worldmodel strategic
 worldmodel serve --reload
 ```
 
-Open `http://127.0.0.1:8000` for the lab UI.
+Open `http://127.0.0.1:8000`.
 
-## Current scientific boundary
+## Research discipline
 
-V0 uses **synthetic data only**. It tests whether the architecture can recover known mechanisms under regime change. It is **not evidence of real-market alpha**, and no output should be treated as investment advice or a trading signal.
+V0 and V1 use **synthetic worlds whose hidden mechanisms are known to the evaluator**. This is intentional. A historical market backtest can reward a wrong explanation; synthetic worlds let us directly score whether the model recovered the actual generating mechanism.
 
-See [`docs/research-plan.md`](docs/research-plan.md) before adding real financial data. The next serious milestone is not “connect Yahoo Finance”; it is making the synthetic worlds harder enough that multiple hidden causes can explain the same superficial price behavior.
+The project does **not** claim real-market alpha. No output is investment advice or a trading signal.
+
+The next phase is a sealed historical protocol: freeze the architecture before revealing later event windows, evaluate reaction fingerprints around earnings / CPI / FOMC-like events, and compare against state-space, tree, neural and simple statistical baselines without retroactive tuning.
+
+See [`docs/research-plan.md`](docs/research-plan.md) and [`docs/architecture.md`](docs/architecture.md).
