@@ -161,10 +161,45 @@ Run it with:
 ```bash
 worldmodel breakthrough --seed 7
 worldmodel physics --seed 7
+worldmodel frontier --seed 7
+worldmodel doctor --seed 7
+worldmodel physics --seed 7
 ```
 
 This is an alpha research result, not a claim that general causal ontology discovery
 has been solved. See [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md).
+
+## V4: frontier discovery suite
+
+V4 turns the separate research primitives into one falsifiable multi-domain suite:
+
+- nonlinear intervention-aware ontology discovery across physics, ecology and epidemic toy worlds
+- automatic latent-dimension selection with PCA as an explicit baseline
+- natural-experiment regime recovery
+- symbolic latent-law discovery
+- joint ontology + law discovery instead of treating representation and dynamics as separate problems
+- open-world rejection when the current hypothesis family is incomplete
+- symbolic theory invention from structured residuals
+- ontology split / merge detection
+- performative-cost-aware experiment selection
+- preregistered prospective predictions that can be scored after the event
+- one unified falsifiable-causal-compression objective
+
+Run the full frontier suite with:
+
+```bash
+worldmodel frontier --seed 7
+```
+
+Run the local integrated verification with:
+
+```bash
+worldmodel doctor --seed 7
+```
+
+A passing doctor result means the controlled V3, cross-domain physics and V4 research checks all pass for the canonical seed. It is a software/research sanity check, **not** evidence that unknown real-world scientific laws have been discovered.
+
+See [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md).
 
 ## Implemented
 
@@ -275,4 +310,4 @@ The project does **not** claim real-market alpha. No output is investment advice
 
 The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
 
-See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
+See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md), [`docs/WINDOWS_TESTING.md`](docs/WINDOWS_TESTING.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).

@@ -15,4 +15,4 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - run: pytest
-      - run: worldmodel breakthrough --seed 7
+      - run: worldmodel doctor --seed 7
