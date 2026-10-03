@@ -20,6 +20,7 @@ def test_integrated_version_and_health():
 def test_frontier_default_seed_passes():
     report = FrontierResearchEngine(seed=7).run()
     print("V4_CHECKS", report["checks"])
+    print("JOINT", report["joint_ontology_law"])
     assert report["all_checks_pass"], report
 
 
