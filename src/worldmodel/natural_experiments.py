@@ -59,9 +59,48 @@ class NaturalEnvironmentDiscoverer:
             chunks.append((start, end))
             summaries.append(np.r_[block.mean(axis=0), block.std(axis=0)])
 
-        summary = StandardScaler().fit_transform(np.vstack(summaries))
+        raw_summary = np.vstack(summaries)
+        summary = StandardScaler().fit_transform(raw_summary)
         if len(summary) < 4:
             raise ValueError("not enough blocks to discover natural environments")
+
+        # Natural experiments in ordered data are often regime changes, not an
+        # exchangeable bag of clusters. Detect unusually large adjacent shifts first.
+        # This keeps temporal contiguity and avoids silhouette's tendency to over-split
+        # a stable regime into several visually compact KMeans clusters.
+        mean_dim = x.shape[1]
+        standardized_means = StandardScaler().fit_transform(raw_summary[:, :mean_dim])
+        adjacent_distance = np.linalg.norm(np.diff(standardized_means, axis=0), axis=1)
+        median = float(np.median(adjacent_distance))
+        mad = float(np.median(np.abs(adjacent_distance - median)))
+        robust_scale = max(1e-9, 1.4826 * mad)
+        threshold = median + 3.0 * robust_scale
+        boundaries = np.flatnonzero(adjacent_distance > threshold) + 1
+
+        segment_count = len(boundaries) + 1
+        if 2 <= segment_count <= self.max_regimes:
+            block_labels = np.zeros(len(summary), dtype=int)
+            for boundary in boundaries:
+                block_labels[boundary:] += 1
+
+            labels = np.empty(len(x), dtype=int)
+            for label, (start, end) in zip(block_labels, chunks):
+                labels[start:end] = int(label)
+
+            if len(np.unique(block_labels)) > 1:
+                temporal_silhouette = float(silhouette_score(summary, block_labels))
+                unique = np.unique(labels)
+                mapping = {value: index for index, value in enumerate(unique)}
+                descriptors = np.zeros((len(x), len(unique)), dtype=float)
+                for row, label in enumerate(labels):
+                    descriptors[row, mapping[int(label)]] = 1.0
+                return NaturalExperimentResult(
+                    labels=labels,
+                    descriptors=descriptors,
+                    cluster_count=len(unique),
+                    silhouette=temporal_silhouette,
+                    block_labels=block_labels,
+                )
 
         best_model: KMeans | None = None
         best_score = -np.inf
