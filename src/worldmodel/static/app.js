@@ -201,7 +201,8 @@ function renderPhysics(data) {
   $('physics-probe-copy').innerHTML = `
     <span class="code-dim">selected diagnostic intervention</span><br>
     <strong>${pretty(probe.name)} · +${fmt(probe.force, 2)} force for ${probe.duration} steps</strong><br>
-    <span class="code-dim">expected information gain ${fmt(active.expected_information_gain, 3)}</span>
+    <span class="code-dim">expected information gain ${fmt(active.expected_information_gain, 3)}</span><br>
+    <span class="code-dim">preregistered ${data.preregistration.seal.slice(0, 16)}…</span>
   `;
 
   const half = Math.floor(active.observation.length / 2);
