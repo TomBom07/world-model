@@ -65,6 +65,21 @@ const CONTEXTS = {
       ['What does this still not prove?', 'See the scientific boundary of a historical replay.'],
     ],
   },
+  custom: {
+    name: 'Your data',
+    kicker: 'YOUR DATA',
+    title: 'Bring your own world.',
+    copy: 'Upload a numeric CSV, choose what you want to explain, and Rook will search for a compact relationship while keeping the final rows untouched for holdout evaluation.',
+    placeholder: 'Ask Rook about your uploaded data…',
+    boundary: 'Uploaded observational data · predictive structure is not automatically causal',
+    quick: 'Analyze data',
+    starters: [
+      ['Upload a CSV', 'Choose a numeric table and the target you want Rook to explain.'],
+      ['What will Rook do with my data?', 'See the train/holdout protocol before uploading anything.'],
+      ['What kind of CSV works best?', 'Learn the minimum requirements and current limits.'],
+      ['What does Rook refuse to claim?', 'Understand the causality and extrapolation boundary.'],
+    ],
+  },
 };
 
 const STORAGE_KEY = 'rook.threads.v2';
@@ -78,6 +93,9 @@ const state = {
   v0: null,
   health: null,
   scenario: null,
+  customData: null,
+  customFileName: null,
+  customUpload: null,
   loading: false,
   threads: [],
   activeThreadId: null,
@@ -128,6 +146,8 @@ function createThread(context = state.context) {
     title: 'New chat',
     createdAt: Date.now(),
     messages: [],
+    customAnalysis: context === 'custom' ? state.customData : null,
+    customFileName: context === 'custom' ? state.customFileName : null,
   };
   state.threads.unshift(thread);
   state.activeThreadId = thread.id;
@@ -187,15 +207,26 @@ function renderContext() {
   $('welcome-title').textContent = context.title;
   $('welcome-copy').textContent = context.copy;
   $('ask-input').placeholder = context.placeholder;
-  $('composer-boundary').textContent = context.boundary;
-  $('quick-test').textContent = context.quick;
+  $('composer-boundary').textContent = state.context === 'custom' && state.customData
+    ? `${state.customFileName || 'Uploaded CSV'} · predictive structure is not automatically causal`
+    : context.boundary;
+  $('quick-test').textContent = state.context === 'custom' && state.customData ? 'Analyze another' : context.quick;
 
   document.querySelectorAll('.context-item').forEach((button) => {
     button.classList.toggle('active', button.dataset.context === state.context);
   });
 
-  $('starter-grid').innerHTML = context.starters.map(([title, description]) => `
-    <button class="starter-card" data-starter="${escapeHTML(title)}">
+  const starters = state.context === 'custom' && state.customData
+    ? [
+        ['What did you find?', 'See the best compact equation and untouched holdout score.'],
+        ['Which features matter most?', 'Use holdout permutation sensitivity, not causal language.'],
+        ['How good is the holdout result?', 'Compare the symbolic model with mean and ridge baselines.'],
+        ['Can I call this causal?', 'Keep prediction, mechanism, and causality separate.'],
+      ]
+    : context.starters;
+
+  $('starter-grid').innerHTML = starters.map(([title, description], index) => `
+    <button class="starter-card" data-starter="${escapeHTML(title)}" ${state.context === 'custom' && !state.customData && index === 0 ? 'data-open-custom="true"' : ''}>
       <strong>${escapeHTML(title)}</strong>
       <small>${escapeHTML(description)}</small>
     </button>
@@ -647,18 +678,144 @@ function genericAnswer(context) {
   `;
 }
 
+function answerCustom(q) {
+  const data = state.customData;
+
+  if (!data) {
+    if (q.includes('what will') || q.includes('do with my data') || q.includes('protocol')) {
+      return `
+        <span class="answer-lead">I keep the final 20% of complete rows untouched, then search only the earlier rows.</span>
+        Features are standardized using training statistics only. I search a small symbolic language of linear terms, pairwise interactions, and squares,
+        then compare the winning compact model against a mean baseline and ridge regression on the untouched holdout.
+        ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+      `;
+    }
+    if (q.includes('kind of csv') || q.includes('requirements') || q.includes('works best')) {
+      return `
+        <span class="answer-lead">Use a CSV with at least 32 complete numeric rows and at least two numeric columns.</span>
+        Pick one numeric target and up to eight numeric features. Row order matters because the last rows become the holdout.
+        Dates or labels can stay in the file, but the current symbolic engine only models numeric columns.
+        ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+      `;
+    }
+    if (q.includes('refuse') || q.includes('claim') || q.includes('causal')) {
+      return `
+        <span class="answer-lead">I will not call an observational relationship causal just because it predicts well.</span>
+        A frozen holdout checks generalization inside this dataset. It does not establish intervention invariance, remove confounding,
+        or prove the relationship will survive a different population or future regime.
+      `;
+    }
+    return `
+      <span class="answer-lead">Upload a numeric CSV first.</span>
+      Choose a target and up to eight features. I’ll keep a holdout untouched, search for compact symbolic structure, compare baselines,
+      and then you can interrogate the result here.
+      ${actions([{ label: 'Upload CSV', action: 'open-tool' }])}
+    `;
+  }
+
+  const model = data.symbolic_model;
+  const holdout = model.holdout;
+  const ridge = data.baselines.ridge;
+  const mean = data.baselines.mean;
+  const top = data.feature_importance.slice(0, 4);
+
+  if (q.includes('what did') || q.includes('find') || q.includes('summary') || q.includes('model')) {
+    return `
+      <span class="answer-lead">The best compact holdout-tested relationship is:</span>
+      <span class="code-block" style="display:block;margin:10px 0">${escapeHTML(model.program)}</span>
+      On the untouched final rows it reached <strong>R² ${fmt(holdout.r2, 3)}</strong> and
+      <strong>MAE ${fmt(holdout.mae, 3)}</strong>. ${escapeHTML(data.verdict)}
+      ${meta([
+        ['rows used', String(data.dataset.rows_used)],
+        ['holdout rows', String(data.dataset.holdout_rows)],
+        ['model posterior', pct(model.posterior, 1)],
+      ])}
+      ${actions([
+        { label: 'Which features matter?', action: 'ask', question: 'Which features matter most?' },
+        { label: 'Can I call this causal?', action: 'ask', question: 'Can I call this causal?' },
+        { label: 'Evidence', action: 'open-lab' },
+      ])}
+    `;
+  }
+
+  if (q.includes('feature') || q.includes('matter') || q.includes('important')) {
+    const readable = top.map((item, index) =>
+      `${index + 1}. <strong>${escapeHTML(item.feature)}</strong> (holdout MAE +${fmt(item.mae_increase, 3)} when shuffled)`
+    ).join('<br>');
+    return `
+      <span class="answer-lead">These features matter most to this model’s holdout predictions.</span>
+      ${readable || 'No stable feature importance signal was available.'}
+      <span class="answer-detail">This is permutation sensitivity, not causal importance.</span>
+      ${actions([{ label: 'Inspect all evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('good') || q.includes('accurate') || q.includes('holdout') || q.includes('baseline') || q.includes('trust')) {
+    return `
+      <span class="answer-lead">Judge it by the untouched holdout, not the training fit.</span>
+      The symbolic model has <strong>MAE ${fmt(holdout.mae, 3)}</strong>, ridge has
+      <strong>${fmt(ridge.mae, 3)}</strong>, and the mean baseline has <strong>${fmt(mean.mae, 3)}</strong>.
+      Holdout R² is <strong>${fmt(holdout.r2, 3)}</strong>.
+      ${meta([
+        ['train rows', String(data.dataset.train_rows)],
+        ['holdout rows', String(data.dataset.holdout_rows)],
+        ['outside train range', pct(data.extrapolation_fraction, 1)],
+      ])}
+      ${actions([{ label: 'Evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('equation') || q.includes('z(') || q.includes('standard')) {
+    return `
+      <span class="answer-lead">The equation uses standardized feature values.</span>
+      <strong>z(feature)</strong> means the raw value minus that feature’s training mean, divided by its training standard deviation.
+      Standardization is learned from training rows only, which keeps the symbolic search numerically stable without leaking holdout information.
+      ${actions([{ label: 'Show preprocessing values', action: 'open-lab' }])}
+    `;
+  }
+
+  if (q.includes('causal') || q.includes('cause') || q.includes('prove')) {
+    return `
+      <span class="answer-lead">No—this result is predictive, not automatically causal.</span>
+      A compact equation that generalizes on held-out rows is evidence of a reproducible association inside this table.
+      To argue mechanism or causality, you would need stronger identification: interventions, natural experiments, domain assumptions,
+      or prospective evidence designed to separate competing explanations.
+    `;
+  }
+
+  if (q.includes('weak') || q.includes('limit') || q.includes('extrapolat') || q.includes('risk')) {
+    return `
+      <span class="answer-lead">The main risks are distribution shift, confounding, and extrapolation.</span>
+      <strong>${pct(data.extrapolation_fraction, 1)}</strong> of holdout feature cells lie outside the training min/max range.
+      Rook dropped <strong>${data.dataset.rows_dropped}</strong> rows that were incomplete or non-numeric for the selected columns.
+      The final slice is a real holdout inside this file, but it is still only one dataset.
+      ${actions([{ label: 'Evidence', action: 'open-lab' }])}
+    `;
+  }
+
+  return `
+    <span class="answer-lead">Ask me about the discovered equation, holdout performance, important features, weaknesses, or whether the result is causal.</span>
+    ${actions([
+      { label: 'What did you find?', action: 'ask', question: 'What did you find?' },
+      { label: 'Which features matter?', action: 'ask', question: 'Which features matter most?' },
+      { label: 'Evidence', action: 'open-lab' },
+    ])}
+  `;
+}
+
 async function answerQuestion(question) {
   const q = question.trim().toLowerCase();
   if (state.context === 'market') return answerMarket(q);
   if (state.context === 'physics') return answerPhysics(q);
   if (state.context === 'discovery') return answerDiscovery(q);
+  if (state.context === 'custom') return answerCustom(q);
   return answerValidation(q);
 }
 
 async function askRook(question) {
   const clean = question.trim();
   if (!clean) return;
-  if (state.loading) {
+  if (state.loading && !(state.context === 'custom' && state.customData)) {
     toast('Rook is still preparing the current world.');
     return;
   }
@@ -710,7 +867,8 @@ function setComposerReady(ready) {
 async function runAnalysis() {
   if (state.loading) return;
   state.loading = true;
-  setComposerReady(false);
+  const customAlreadyUsable = state.context === 'custom' && Boolean(state.customData);
+  if (!customAlreadyUsable) setComposerReady(false);
   $('run-status').textContent = 'Analyzing…';
   $('runtime-status').textContent = 'Running research stack…';
   $('status-dot').classList.remove('ok');
@@ -770,6 +928,7 @@ function openTool() {
   if (context === 'market') renderMarketTool();
   else if (context === 'physics') renderPhysicsTool();
   else if (context === 'discovery') renderDiscoveryTool();
+  else if (context === 'custom') renderCustomTool();
   else renderValidationTool();
 
   openSheet('tool-sheet');
@@ -927,6 +1086,321 @@ function renderDiscoveryTool() {
   });
 }
 
+
+function detectDelimiter(text) {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || '';
+  const candidates = [',', ';', '\t'];
+  const counts = new Map(candidates.map((candidate) => [candidate, 0]));
+  let quoted = false;
+
+  for (let i = 0; i < firstLine.length; i += 1) {
+    const char = firstLine[i];
+    const next = firstLine[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      i += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && counts.has(char)) counts.set(char, counts.get(char) + 1);
+  }
+
+  return candidates.sort((a, b) => counts.get(b) - counts.get(a))[0];
+}
+
+function parseCSV(text) {
+  const delimiter = detectDelimiter(text);
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        field += '"';
+        i += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        field += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      quoted = true;
+    } else if (char === delimiter) {
+      row.push(field.trim());
+      field = '';
+    } else if (char === '\n') {
+      row.push(field.trim());
+      rows.push(row);
+      row = [];
+      field = '';
+    } else if (char !== '\r') {
+      field += char;
+    }
+  }
+
+  row.push(field.trim());
+  if (row.some((value) => value !== '') || rows.length === 0) rows.push(row);
+
+  const cleaned = rows.filter((values) => values.some((value) => value !== ''));
+  if (cleaned.length < 2) throw new Error('The CSV needs a header row and data rows.');
+
+  const columns = cleaned[0].map((value, index) => {
+    const name = String(value || `column_${index + 1}`).replace(/^\uFEFF/, '').trim();
+    return name || `column_${index + 1}`;
+  });
+  if (new Set(columns).size !== columns.length) throw new Error('CSV column names must be unique.');
+
+  const dataRows = cleaned.slice(1).filter((values) => values.length === columns.length);
+  if (dataRows.length < 32) throw new Error('Rook needs at least 32 well-formed data rows.');
+
+  return { columns, rows: dataRows, delimiter };
+}
+
+function numericValue(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const normalized = text.includes(',') && !text.includes('.') ? text.replace(',', '.') : text;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function getNumericColumns(upload) {
+  return upload.columns.filter((name, index) => {
+    let numeric = 0;
+    for (const row of upload.rows) {
+      if (numericValue(row[index]) !== null) numeric += 1;
+    }
+    return numeric >= Math.max(24, Math.floor(upload.rows.length * 0.65));
+  });
+}
+
+async function postJSON(url, payload, label) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const data = await response.json();
+      detail = data.detail || '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(detail || `${label} returned HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+function renderCustomTool() {
+  $('tool-kicker').textContent = 'YOUR DATA';
+  $('tool-title').textContent = state.customData ? 'Analyze another CSV' : 'Bring your own world';
+
+  $('tool-body').innerHTML = `
+    <p class="tool-intro">Upload a numeric CSV. Nothing is sent until you press Analyze. Rook keeps the final 20% of complete rows untouched as a holdout.</p>
+    <label class="csv-drop" id="csv-drop">
+      <input id="custom-file" type="file" accept=".csv,text/csv" />
+      <span class="csv-drop-icon">↑</span>
+      <strong>${state.customUpload?.fileName ? escapeHTML(state.customUpload.fileName) : 'Choose a CSV'}</strong>
+      <small>${state.customUpload ? `${state.customUpload.rows.length} rows · ${state.customUpload.columns.length} columns` : 'Numeric tables work best · CSV stays local until Analyze'}</small>
+    </label>
+    <div id="custom-setup"></div>
+  `;
+
+  const input = $('custom-file');
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = parseCSV(await file.text());
+      const numericColumns = getNumericColumns(parsed);
+      if (numericColumns.length < 2) {
+        throw new Error('I could not find at least two sufficiently numeric columns.');
+      }
+      state.customUpload = {
+        fileName: file.name,
+        columns: parsed.columns,
+        rows: parsed.rows,
+        numericColumns,
+        target: numericColumns[numericColumns.length - 1],
+        features: numericColumns.slice(0, Math.min(6, numericColumns.length - 1)),
+      };
+      renderCustomSetup();
+    } catch (error) {
+      state.customUpload = null;
+      toast(error.message);
+      renderCustomTool();
+    }
+  });
+
+  const drop = $('csv-drop');
+  drop.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    drop.classList.add('dragging');
+  });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragging'));
+  drop.addEventListener('drop', async (event) => {
+    event.preventDefault();
+    drop.classList.remove('dragging');
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = parseCSV(await file.text());
+      const numericColumns = getNumericColumns(parsed);
+      if (numericColumns.length < 2) throw new Error('I could not find at least two sufficiently numeric columns.');
+      state.customUpload = {
+        fileName: file.name,
+        columns: parsed.columns,
+        rows: parsed.rows,
+        numericColumns,
+        target: numericColumns[numericColumns.length - 1],
+        features: numericColumns.slice(0, Math.min(6, numericColumns.length - 1)),
+      };
+      renderCustomTool();
+      renderCustomSetup();
+    } catch (error) {
+      toast(error.message);
+    }
+  });
+
+  renderCustomSetup();
+}
+
+function renderCustomSetup() {
+  const node = $('custom-setup');
+  const upload = state.customUpload;
+  if (!node || !upload) return;
+
+  const available = upload.numericColumns.filter((name) => name !== upload.target);
+  upload.features = upload.features.filter((name) => available.includes(name)).slice(0, 8);
+  if (!upload.features.length && available.length) upload.features = available.slice(0, Math.min(6, available.length));
+
+  node.innerHTML = `
+    <div class="custom-config">
+      <label class="field">
+        <span>What should Rook explain?</span>
+        <select id="custom-target">
+          ${upload.numericColumns.map((name) => `<option value="${escapeHTML(name)}" ${name === upload.target ? 'selected' : ''}>${escapeHTML(name)}</option>`).join('')}
+        </select>
+      </label>
+
+      <div class="field">
+        <span>Use these features · max 8</span>
+        <div class="feature-list">
+          ${available.map((name) => `
+            <label class="feature-option">
+              <input type="checkbox" value="${escapeHTML(name)}" ${upload.features.includes(name) ? 'checked' : ''} />
+              <span>${escapeHTML(name)}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="holdout-note">
+        <strong>Frozen holdout</strong>
+        <span>Last 20% of complete rows stay unseen during symbolic search.</span>
+      </div>
+
+      <button class="tool-primary" id="custom-analyze" ${upload.features.length ? '' : 'disabled'}>Analyze ${escapeHTML(upload.fileName)}</button>
+      <div class="tool-result" id="custom-status"></div>
+    </div>
+  `;
+
+  $('custom-target').addEventListener('change', (event) => {
+    upload.target = event.target.value;
+    upload.features = upload.numericColumns
+      .filter((name) => name !== upload.target)
+      .slice(0, Math.min(6, upload.numericColumns.length - 1));
+    renderCustomSetup();
+  });
+
+  node.querySelectorAll('.feature-option input').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      const checked = [...node.querySelectorAll('.feature-option input:checked')].map((item) => item.value);
+      if (checked.length > 8) {
+        checkbox.checked = false;
+        toast('Choose at most 8 features.');
+        return;
+      }
+      upload.features = checked;
+      $('custom-analyze').disabled = checked.length === 0;
+    });
+  });
+
+  $('custom-analyze').addEventListener('click', analyzeCustomUpload);
+}
+
+function customSummaryHTML(data) {
+  return `
+    <span class="answer-lead">I found a compact relationship and scored it on untouched rows.</span>
+    <span class="code-block" style="display:block;margin:10px 0">${escapeHTML(data.symbolic_model.program)}</span>
+    Holdout <strong>R² ${fmt(data.symbolic_model.holdout.r2, 3)}</strong> ·
+    MAE <strong>${fmt(data.symbolic_model.holdout.mae, 3)}</strong>.
+    ${escapeHTML(data.verdict)}
+    ${actions([
+      { label: 'Which features matter?', action: 'ask', question: 'Which features matter most?' },
+      { label: 'Can I call this causal?', action: 'ask', question: 'Can I call this causal?' },
+      { label: 'Evidence', action: 'open-lab' },
+    ])}
+  `;
+}
+
+async function analyzeCustomUpload() {
+  const upload = state.customUpload;
+  const button = $('custom-analyze');
+  if (!upload || !button || !upload.features.length) return;
+
+  button.disabled = true;
+  button.textContent = 'Analyzing…';
+  const status = $('custom-status');
+  status.innerHTML = '<div class="result-summary">Searching compact symbolic models and preserving the holdout…</div>';
+
+  try {
+    const result = await postJSON('/api/custom/analyze', {
+      columns: upload.columns,
+      rows: upload.rows,
+      target: upload.target,
+      features: upload.features,
+      holdout_fraction: 0.20,
+      seed: Number($('seed').value || 7),
+    }, 'Custom world');
+
+    state.customData = result;
+    state.customFileName = upload.fileName;
+
+    const thread = ensureThread();
+    thread.context = 'custom';
+    thread.customAnalysis = result;
+    thread.customFileName = upload.fileName;
+    if (thread.title === 'New chat') thread.title = `${upload.fileName}: ${upload.target}`.slice(0, 48);
+    saveThreads();
+
+    closeSheets();
+    renderContext();
+    renderLab();
+
+    const reply = saveMessage('assistant', { html: customSummaryHTML(result) });
+    renderConversation();
+    requestAnimationFrame(() => replyNode(reply.id)?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+    toast('Custom world analyzed.');
+  } catch (error) {
+    status.innerHTML = `<div class="result-summary"><strong>Could not analyze this CSV.</strong><br>${escapeHTML(error.message)}</div>`;
+    button.disabled = false;
+    button.textContent = `Analyze ${upload.fileName}`;
+  }
+}
+
 function renderValidationTool() {
   const data = state.sealed;
   $('tool-kicker').textContent = 'SEALED REPLAY';
@@ -971,6 +1445,7 @@ function renderLab() {
   if (state.context === 'market') body.innerHTML = marketLabHTML();
   else if (state.context === 'physics') body.innerHTML = physicsLabHTML();
   else if (state.context === 'discovery') body.innerHTML = discoveryLabHTML();
+  else if (state.context === 'custom') body.innerHTML = customLabHTML();
   else body.innerHTML = validationLabHTML();
 }
 
@@ -1071,6 +1546,78 @@ function discoveryLabHTML() {
   `;
 }
 
+
+function customLabHTML() {
+  const data = state.customData;
+  if (!data) {
+    return `
+      <div class="lab-section">
+        <p class="eyebrow">YOUR DATA</p>
+        <h3>No CSV analyzed yet</h3>
+        <div class="result-summary">Upload a numeric CSV from the + tool, choose a target and features, then analyze it.</div>
+      </div>
+    `;
+  }
+
+  const model = data.symbolic_model;
+  return `
+    <div class="lab-section">
+      <p class="eyebrow">DATASET</p><h3>${escapeHTML(state.customFileName || 'Uploaded CSV')}</h3>
+      <div class="lab-grid">
+        ${metricHTML('Rows used', String(data.dataset.rows_used))}
+        ${metricHTML('Rows dropped', String(data.dataset.rows_dropped))}
+        ${metricHTML('Target', data.dataset.target)}
+        ${metricHTML('Holdout', `${data.dataset.holdout_rows} rows`)}
+      </div>
+    </div>
+    <div class="lab-section">
+      <p class="eyebrow">DISCOVERED MODEL</p>
+      <div class="code-block">${escapeHTML(model.program)}</div>
+      <div style="height:8px"></div>
+      <div class="lab-grid">
+        ${metricHTML('Holdout R²', fmt(model.holdout.r2, 4))}
+        ${metricHTML('Holdout MAE', fmt(model.holdout.mae, 4))}
+        ${metricHTML('Ridge MAE', fmt(data.baselines.ridge.mae, 4))}
+        ${metricHTML('Mean MAE', fmt(data.baselines.mean.mae, 4))}
+        ${metricHTML('Model posterior', pct(model.posterior, 1))}
+        ${metricHTML('Extrapolation', pct(data.extrapolation_fraction, 1))}
+      </div>
+    </div>
+    <div class="lab-section">
+      <p class="eyebrow">PREDICTIVE FEATURE SENSITIVITY</p>
+      <div class="check-list">
+        ${data.feature_importance.map((item, index) => `
+          <div class="check-row">
+            <span>${index + 1}. ${escapeHTML(item.feature)}</span>
+            <b class="${item.mae_increase > 0 ? 'pass' : ''}">MAE +${fmt(item.mae_increase, 4)}</b>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="lab-section">
+      <p class="eyebrow">TOP SYMBOLIC CANDIDATES</p>
+      ${model.top_models.map((item) => `
+        <div class="code-block" style="margin-top:6px">#${item.rank} · p=${pct(item.posterior, 1)} · ${escapeHTML(item.program)}</div>
+      `).join('')}
+    </div>
+    <div class="lab-section">
+      <p class="eyebrow">TRAINING STANDARDIZATION</p>
+      <div class="check-list">
+        ${data.dataset.features.map((name) => `
+          <div class="check-row">
+            <span>${escapeHTML(name)}</span>
+            <b>μ ${fmt(data.preprocessing.feature_means[name], 3)} · σ ${fmt(data.preprocessing.feature_scales[name], 3)}</b>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="lab-section">
+      <p class="eyebrow">SCIENTIFIC BOUNDARY</p>
+      <div class="result-summary">${escapeHTML(data.scientific_boundary)}</div>
+    </div>
+  `;
+}
+
 function validationLabHTML() {
   const data = state.sealed;
   if (!data) return '<p class="tool-intro">Validation replay is loading.</p>';
@@ -1142,6 +1689,10 @@ function loadThread(id) {
   if (!thread) return;
   state.activeThreadId = id;
   state.context = thread.context;
+  if (thread.context === 'custom') {
+    state.customData = thread.customAnalysis || null;
+    state.customFileName = thread.customFileName || null;
+  }
   renderContext();
   renderConversation();
   renderRecent();
@@ -1164,7 +1715,9 @@ function bindEvents() {
 
   $('starter-grid').addEventListener('click', (event) => {
     const card = event.target.closest('[data-starter]');
-    if (card) askRook(card.dataset.starter);
+    if (!card) return;
+    if (card.dataset.openCustom === 'true') openTool();
+    else askRook(card.dataset.starter);
   });
 
   $('conversation').addEventListener('click', (event) => {
@@ -1241,6 +1794,7 @@ function bindEvents() {
       physics: 'Why is that the best explanation?',
       discovery: 'Why is this a meaningful discovery?',
       validation: 'Why should I trust this evaluation?',
+      custom: state.customData ? 'Why should I trust this holdout result?' : 'What will Rook do with my data?',
     }[state.context];
     askRook(question);
   });
@@ -1277,6 +1831,10 @@ async function init() {
   if (state.threads.length) {
     state.activeThreadId = state.threads[0].id;
     state.context = state.threads[0].context || 'market';
+    if (state.context === 'custom') {
+      state.customData = state.threads[0].customAnalysis || null;
+      state.customFileName = state.threads[0].customFileName || null;
+    }
   } else {
     createThread('market');
   }
@@ -1285,7 +1843,7 @@ async function init() {
   renderRecent();
   renderConversation();
   bindEvents();
-  setComposerReady(false);
+  setComposerReady(state.context === 'custom' && Boolean(state.customData));
   await runAnalysis();
   $('ask-input').focus();
 }
