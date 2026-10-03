@@ -7,6 +7,7 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .breakthrough_engine import BreakthroughResearchEngine
 from .engine import ResearchEngine
 from .historical_engine import HistoricalResearchEngine
 from .physics_engine import PhysicsDiscoveryEngine
@@ -47,6 +48,11 @@ def _cached_physics(seed: int, observations: int):
 @lru_cache(maxsize=16)
 def _cached_frontier(seed: int):
     return FrontierResearchEngine(seed=seed).run()
+
+
+@lru_cache(maxsize=16)
+def _cached_breakthrough(seed: int):
+    return BreakthroughResearchEngine(seed=seed).run()
 
 
 @app.get("/")
@@ -98,3 +104,8 @@ def physics(
 @app.get("/api/frontier")
 def frontier(seed: int = Query(7, ge=0, le=1_000_000)):
     return _cached_frontier(seed)
+
+
+@app.get("/api/breakthrough")
+def breakthrough(seed: int = Query(7, ge=0, le=1_000_000)):
+    return _cached_breakthrough(seed)
