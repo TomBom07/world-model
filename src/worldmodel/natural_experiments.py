@@ -44,22 +44,29 @@ class NaturalEnvironmentDiscoverer:
         if x.ndim != 2 or len(x) < self.window * 4:
             raise ValueError("x must contain at least four windows")
 
+        # Normalize the observed variables before block summarization. Standardizing
+        # the concatenated block means/stds afterwards can amplify low-signal sampling
+        # noise in variance descriptors until it dominates genuine distribution shifts.
+        # Working in standardized observation units preserves both location and scale
+        # changes without giving every noisy summary coordinate unit variance.
+        x_scaled = StandardScaler().fit_transform(x)
+
         chunks: list[tuple[int, int]] = []
         summaries: list[np.ndarray] = []
-        for start in range(0, len(x), self.window):
-            end = min(len(x), start + self.window)
+        for start in range(0, len(x_scaled), self.window):
+            end = min(len(x_scaled), start + self.window)
             if end - start < max(4, self.window // 3):
                 if chunks:
                     prev_start, _ = chunks[-1]
                     chunks[-1] = (prev_start, end)
-                    block = x[prev_start:end]
+                    block = x_scaled[prev_start:end]
                     summaries[-1] = np.r_[block.mean(axis=0), block.std(axis=0)]
                 break
-            block = x[start:end]
+            block = x_scaled[start:end]
             chunks.append((start, end))
             summaries.append(np.r_[block.mean(axis=0), block.std(axis=0)])
 
-        summary = StandardScaler().fit_transform(np.vstack(summaries))
+        summary = np.vstack(summaries)
         if len(summary) < 4:
             raise ValueError("not enough blocks to discover natural environments")
 
