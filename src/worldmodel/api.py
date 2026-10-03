@@ -8,12 +8,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .engine import ResearchEngine
+from .strategic_engine import StrategicResearchEngine
 
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.1.0",
-    description="Reflexive Mechanism Compilation research sandbox.",
+    version="0.2.0",
+    description="Reflexive Mechanism Compilation and active hidden-world identification.",
 )
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -25,6 +26,11 @@ def _cached_demo(seed: int, observations: int, target: str):
     return ResearchEngine(seed=seed).run_demo(n=observations, target=target)
 
 
+@lru_cache(maxsize=32)
+def _cached_strategic(seed: int, observations: int):
+    return StrategicResearchEngine(seed=seed).run_demo(n=observations)
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -32,7 +38,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v0"}
+    return {"status": "ok", "engine": "rmc-v1"}
 
 
 @app.get("/api/demo")
@@ -45,3 +51,11 @@ def demo(
     if target not in allowed:
         target = "growth_equity"
     return _cached_demo(seed, observations, target)
+
+
+@app.get("/api/strategic")
+def strategic(
+    seed: int = Query(7, ge=0, le=1_000_000),
+    observations: int = Query(260, ge=180, le=600),
+):
+    return _cached_strategic(seed, observations)

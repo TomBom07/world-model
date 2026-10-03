@@ -4,9 +4,9 @@
 
 Can a compact, self-revising mechanism learner recover the active rule of a changing reflexive system with fewer observations and better out-of-distribution behavior than conventional black-box baselines?
 
-## Phase 0 — falsifiable sandbox
+## Phase 0 — falsifiable mechanism sandbox ✅
 
-Implemented now:
+Implemented:
 
 - known hidden mechanisms
 - known structural break
@@ -19,30 +19,79 @@ Implemented now:
 - adversarial perturbation search
 - sample-efficiency baseline harness
 
-### Success metrics
+## Phase 1 — strategic hidden worlds ✅
 
-- term-level mechanism recovery
-- holdout MAE
-- regime-break localization error
-- calibration/model-consensus behavior
-- sample-efficiency curves
+Implemented:
 
-## Phase 1 — harder synthetic worlds
+- heterogeneous strategic populations
+- private first-order beliefs
+- explicit second-order beliefs
+- leverage constraints
+- margin / forced-deleveraging events
+- dealer hedging
+- observationally similar worlds with different hidden causes
+- cross-asset reaction fingerprints
+- active event selection
+- posterior mechanism updating
+- belief-field compression
+- second-order-belief ablation
+- active-vs-random identification benchmark
 
-Add strategic agent populations, leverage constraints, dealer hedging, information asymmetry and explicit higher-order beliefs. The simulator should be able to produce the same price path from different hidden causes so identification is genuinely difficult.
+### Phase 1 success metrics
+
+- ordinary return-path correlation between hidden worlds
+- normalized distance between observationally equivalent histories
+- separability of diagnostic reaction fingerprints
+- posterior mass on the true hidden mechanism
+- entropy reduction
+- active-event vs random-event information gain
+- held-out uplift from adding second-order beliefs
 
 ## Phase 2 — sealed historical experiments
 
-Freeze architecture and hyperparameters before revealing later time periods. Use event-defined datasets such as earnings, CPI, FOMC and liquidity shocks plus cross-asset reaction fingerprints. Compare against linear, tree, state-space and neural baselines.
+Freeze the architecture and hyperparameters **before** revealing later periods.
+
+Build event-defined datasets around:
+
+- earnings
+- CPI-like inflation releases
+- central-bank decisions
+- liquidity / funding shocks
+- large volatility events
+
+For each event family:
+
+1. define observable state using only information available before the event;
+2. generate candidate mechanism fingerprints;
+3. timestamp the candidate predictions;
+4. reveal the event window;
+5. update mechanism probabilities;
+6. score calibration and predictive likelihood;
+7. compare against simple and strong baselines.
+
+Baselines should include linear / Ridge, tree ensembles, state-space models and at least one neural time-series model.
 
 ## Phase 3 — live paper forecasting
 
-Timestamp every prediction before the event. No retroactive changes. Track calibration, abstention quality and whether model-disagreement gates prevent bad predictions.
+Timestamp every forecast before the event. No retroactive changes.
 
-## Phase 4 — active world identification
+Track:
 
-Given several plausible mechanisms, choose the future observation or event whose reaction fingerprints would maximally distinguish them. The objective is not just to forecast, but to learn which world we are in.
+- calibration
+- likelihood
+- abstention quality
+- regime-change detection delay
+- whether active event selection improves learning
+- transaction-cost-aware paper performance only as a secondary metric
 
-## Non-goal
+## Phase 4 — open-ended mechanism invention
+
+Permit the system to propose new variables and executable mechanisms when all current worlds fail.
+
+A proposed ontology change must earn its place by improving out-of-sample compression / prediction, not by sounding plausible.
+
+## Non-goals
 
 Synthetic performance is not evidence of real-market alpha. A mechanism can be scientifically interesting without being tradeable after costs, latency, crowding and execution.
+
+The project should prefer a falsified hypothesis over a flattering backtest.

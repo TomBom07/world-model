@@ -8,47 +8,165 @@
 </head>
 <body>
   <div class="noise"></div>
+
   <header class="topbar">
-    <div class="brand"><span class="orb"></span><span>WorldModel</span><span class="tag">RMC Lab</span></div>
-    <div class="status"><span class="pulse"></span> synthetic world online</div>
+    <div class="brand">
+      <span class="orb"></span>
+      <span>WorldModel</span>
+      <span class="tag">RMC V1</span>
+    </div>
+    <div class="status"><span class="pulse"></span> strategic world lab</div>
   </header>
 
   <main>
     <section class="hero">
       <div>
-        <p class="eyebrow">REFLEXIVE MECHANISM COMPILER / V0</p>
-        <h1>Infer the rule that is<br><span>rewriting the world.</span></h1>
-        <p class="lede">A falsifiable sandbox for mechanism discovery, regime breaks, belief tomography, model disagreement and adversarial counterfactuals.</p>
+        <p class="eyebrow">REFLEXIVE MECHANISM COMPILER / ACTIVE IDENTIFICATION</p>
+        <h1>Same tape.<br><span>Different world.</span></h1>
+        <p class="lede">
+          Build competing explanations of reality, find the event that would make them
+          disagree most, then update the world model from what actually happens.
+        </p>
       </div>
+
       <div class="controls glass">
-        <label>Seed<input id="seed" type="number" value="7" min="0" /></label>
-        <label>Target<select id="target">
-          <option value="growth_equity">Growth equity</option>
-          <option value="value_equity">Value equity</option>
-          <option value="two_year_yield">2Y yield</option>
-          <option value="usd">USD</option>
-          <option value="gold">Gold</option>
-          <option value="volatility">Volatility</option>
-        </select></label>
-        <button id="run">Compile world</button>
+        <label>
+          Seed
+          <input id="seed" type="number" value="7" min="0" />
+        </label>
+        <label>
+          Symbolic target
+          <select id="target">
+            <option value="growth_equity">Growth equity</option>
+            <option value="value_equity">Value equity</option>
+            <option value="two_year_yield">2Y yield</option>
+            <option value="usd">USD</option>
+            <option value="gold">Gold</option>
+            <option value="volatility">Volatility</option>
+          </select>
+        </label>
+        <button id="run">Run world experiment</button>
       </div>
     </section>
 
-    <section class="metrics" id="metrics"></section>
+    <section class="metrics" id="strategic-metrics"></section>
 
     <section class="grid two">
       <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">MECHANISM COMPILER</p><h2>Recovered world program</h2></div><span id="recovery-pill" class="pill"></span></div>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">OBSERVATIONAL EQUIVALENCE</p>
+            <h2>Two causes. Almost the same tape.</h2>
+          </div>
+          <span id="twin-pill" class="pill"></span>
+        </div>
+        <p class="muted">
+          Growth-equity cumulative paths before the diagnostic event. The learner sees
+          nearly identical observations even though the internal mechanics differ.
+        </p>
+        <div class="chart-shell">
+          <svg id="twin-chart" viewBox="0 0 680 250" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="chart-legend">
+          <span><i class="line-key belief"></i> belief-reflexive</span>
+          <span><i class="line-key liquidity"></i> liquidity-reflexive</span>
+        </div>
+        <div id="hidden-mechanics" class="mechanics"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">ACTIVE IDENTIFICATION</p>
+            <h2>What should we observe next?</h2>
+          </div>
+          <span id="probe-pill" class="pill"></span>
+        </div>
+        <div id="probe-copy" class="program">Ranking diagnostic events…</div>
+
+        <p class="eyebrow section-gap">POSTERIOR OVER HIDDEN WORLDS</p>
+        <div id="posterior" class="posterior"></div>
+
+        <p class="eyebrow section-gap">MOST INFORMATIVE EVENTS</p>
+        <div id="probes" class="probe-list"></div>
+      </article>
+    </section>
+
+    <section class="grid two">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">PREDICTIONS OF PREDICTIONS</p>
+            <h2>Higher-order belief field</h2>
+          </div>
+          <span id="belief-gap-pill" class="pill"></span>
+        </div>
+        <p class="muted">
+          First-order beliefs estimate the world. Second-order beliefs estimate what
+          other participants believe. We keep both explicit and test whether the second
+          layer adds held-out information.
+        </p>
+        <div id="belief-factors" class="factor-list"></div>
+        <div id="belief-ablation" class="ablation"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">INFORMATION-SEEKING BENCHMARK</p>
+            <h2>Active event vs random event</h2>
+          </div>
+          <span class="pill neutral">synthetic only</span>
+        </div>
+        <div id="identification-benchmark" class="benchmark-cards"></div>
+        <p class="muted section-gap">
+          Both methods receive one reaction fingerprint. The difference is whether the
+          event was selected to maximally separate the competing world models.
+        </p>
+      </article>
+    </section>
+
+    <section class="foundation-head">
+      <p class="eyebrow">FOUNDATION LAYER / V0</p>
+      <h2>Executable mechanism compilation</h2>
+      <p class="muted">
+        The strategic layer sits on top of the original symbolic compiler, regime
+        detector, ontology search, model invariants and adversarial stress tests.
+      </p>
+    </section>
+
+    <section class="metrics" id="v0-metrics"></section>
+
+    <section class="grid two">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">MECHANISM COMPILER</p>
+            <h2>Recovered world program</h2>
+          </div>
+          <span id="recovery-pill" class="pill"></span>
+        </div>
         <div class="program" id="program">Compiling…</div>
         <div class="truth-row"><span>Hidden truth</span><code id="truth"></code></div>
         <div class="model-list" id="models"></div>
       </article>
 
       <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">STRUCTURAL BREAK</p><h2>Regime shift detector</h2></div></div>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">STRUCTURAL BREAK</p>
+            <h2>When the old world stops working</h2>
+          </div>
+        </div>
         <div class="timeline-wrap">
-          <div class="timeline"><div id="true-marker" class="marker true"></div><div id="detected-marker" class="marker detected"></div></div>
-          <div class="legend"><span><i class="dot true-dot"></i> true break</span><span><i class="dot detected-dot"></i> detected</span></div>
+          <div class="timeline">
+            <div id="true-marker" class="marker true"></div>
+            <div id="detected-marker" class="marker detected"></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot true-dot"></i> true break</span>
+            <span><i class="dot detected-dot"></i> detected</span>
+          </div>
         </div>
         <div class="break-copy" id="break-copy"></div>
         <div class="ontology" id="ontology"></div>
@@ -57,27 +175,48 @@
 
     <section class="grid two">
       <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">BELIEF TOMOGRAPHY</p><h2>Reaction fingerprint</h2></div></div>
-        <p class="muted">SVD reconstructs latent cross-asset reaction factors without being told the hidden regime.</p>
-        <div id="tomography" class="factor-list"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">PREDICTION INVARIANTS</p><h2>What survives model uncertainty?</h2></div></div>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">PREDICTION INVARIANTS</p>
+            <h2>What survives model uncertainty?</h2>
+          </div>
+        </div>
         <div id="invariant"></div>
         <h3>Destroyer · weakest counterfactuals</h3>
         <div id="adversary" class="adversary"></div>
       </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">SAMPLE EFFICIENCY</p>
+            <h2>Structure vs brute force</h2>
+          </div>
+          <span class="pill neutral">controlled world</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>N</th>
+                <th>RMC</th>
+                <th>Ridge</th>
+                <th>Poly</th>
+                <th>RF</th>
+                <th>Best</th>
+              </tr>
+            </thead>
+            <tbody id="benchmark"></tbody>
+          </table>
+        </div>
+      </article>
     </section>
 
-    <section class="panel benchmark-panel">
-      <div class="panel-head"><div><p class="eyebrow">SAMPLE EFFICIENCY</p><h2>Can structure beat brute force with less data?</h2></div><span class="pill neutral">synthetic benchmark</span></div>
-      <p class="muted">The benchmark is intentionally structured and does not imply market alpha. Its purpose is to test the research hypothesis under controlled conditions.</p>
-      <div class="table-wrap"><table><thead><tr><th>Observations</th><th>RMC MAE</th><th>Ridge MAE</th><th>Poly Ridge MAE</th><th>Random forest MAE</th><th>Best</th></tr></thead><tbody id="benchmark"></tbody></table></div>
-    </section>
+    <div id="boundary" class="boundary"></div>
 
-    <footer>WorldModel RMC · Mechanism recovery first. Markets later.</footer>
+    <footer>WorldModel RMC · explain, distinguish, falsify, update.</footer>
   </main>
+
   <script src="/static/app.js"></script>
 </body>
 </html>
