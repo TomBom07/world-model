@@ -1086,7 +1086,31 @@ function renderDiscoveryTool() {
 }
 
 
+function detectDelimiter(text) {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || '';
+  const candidates = [',', ';', '\t'];
+  const counts = new Map(candidates.map((candidate) => [candidate, 0]));
+  let quoted = false;
+
+  for (let i = 0; i < firstLine.length; i += 1) {
+    const char = firstLine[i];
+    const next = firstLine[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      i += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && counts.has(char)) counts.set(char, counts.get(char) + 1);
+  }
+
+  return candidates.sort((a, b) => counts.get(b) - counts.get(a))[0];
+}
+
 function parseCSV(text) {
+  const delimiter = detectDelimiter(text);
   const rows = [];
   let row = [];
   let field = '';
@@ -1110,7 +1134,7 @@ function parseCSV(text) {
 
     if (char === '"') {
       quoted = true;
-    } else if (char === ',') {
+    } else if (char === delimiter) {
       row.push(field.trim());
       field = '';
     } else if (char === '\n') {
@@ -1138,15 +1162,22 @@ function parseCSV(text) {
   const dataRows = cleaned.slice(1).filter((values) => values.length === columns.length);
   if (dataRows.length < 32) throw new Error('Rook needs at least 32 well-formed data rows.');
 
-  return { columns, rows: dataRows };
+  return { columns, rows: dataRows, delimiter };
+}
+
+function numericValue(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const normalized = text.includes(',') && !text.includes('.') ? text.replace(',', '.') : text;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
 }
 
 function getNumericColumns(upload) {
   return upload.columns.filter((name, index) => {
     let numeric = 0;
     for (const row of upload.rows) {
-      const value = String(row[index] ?? '').trim();
-      if (value !== '' && Number.isFinite(Number(value))) numeric += 1;
+      if (numericValue(row[index]) !== null) numeric += 1;
     }
     return numeric >= Math.max(24, Math.floor(upload.rows.length * 0.65));
   });
