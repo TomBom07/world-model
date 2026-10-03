@@ -83,6 +83,8 @@ const CONTEXTS = {
 };
 
 const STORAGE_KEY = 'rook.threads.v2';
+const AI_MODEL_STORAGE_KEY = 'rook.ollama.model.v1';
+const AI_ENABLED_STORAGE_KEY = 'rook.ollama.enabled.v1';
 
 const state = {
   context: 'market',
@@ -96,6 +98,14 @@ const state = {
   customData: null,
   customFileName: null,
   customUpload: null,
+  ai: {
+    available: false,
+    models: [],
+    model: null,
+    preferredModel: null,
+    enabled: true,
+    error: null,
+  },
   loading: false,
   threads: [],
   activeThreadId: null,
@@ -112,6 +122,187 @@ function escapeHTML(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function plainTextFromHTML(html) {
+  const node = document.createElement('div');
+  node.innerHTML = String(html || '');
+  return (node.textContent || node.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function renderAIText(text) {
+  let safe = escapeHTML(text || '');
+  const blocks = [];
+  safe = safe.replace(/```(?:[a-zA-Z0-9_+-]+)?\n?([\s\S]*?)```/g, (_, code) => {
+    const token = `__ROOK_CODE_${blocks.length}__`;
+    blocks.push(`<span class="code-block" style="display:block;margin:10px 0">${code.trim()}</span>`);
+    return token;
+  });
+  safe = safe
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>')
+    .replace(/\n/g, '<br>');
+  blocks.forEach((block, index) => {
+    safe = safe.replace(`__ROOK_CODE_${index}__`, block);
+  });
+  return safe;
+}
+
+function loadAISettings() {
+  try {
+    state.ai.preferredModel = localStorage.getItem(AI_MODEL_STORAGE_KEY) || null;
+    state.ai.enabled = localStorage.getItem(AI_ENABLED_STORAGE_KEY) !== 'false';
+  } catch {
+    state.ai.preferredModel = null;
+    state.ai.enabled = true;
+  }
+}
+
+function saveAISettings() {
+  try {
+    if (state.ai.model) localStorage.setItem(AI_MODEL_STORAGE_KEY, state.ai.model);
+    localStorage.setItem(AI_ENABLED_STORAGE_KEY, String(state.ai.enabled));
+  } catch {
+    // AI preferences are convenience only.
+  }
+}
+
+function updateAIUI() {
+  const pill = $('ai-status-pill');
+  const label = $('ollama-status-text');
+  const select = $('ollama-model');
+  const toggle = $('ollama-enabled');
+
+  if (!pill || !label || !select || !toggle) return;
+
+  toggle.checked = state.ai.enabled;
+  pill.classList.remove('online', 'offline');
+  label.classList.remove('online');
+
+  if (!state.ai.enabled) {
+    pill.textContent = 'Local AI off';
+    pill.classList.add('offline');
+    label.textContent = state.ai.available ? 'Ollama detected · disabled' : 'Disabled';
+    return;
+  }
+
+  if (state.ai.available && state.ai.model) {
+    pill.textContent = `Local AI · ${state.ai.model}`;
+    pill.classList.add('online');
+    label.textContent = 'Ollama connected';
+    label.classList.add('online');
+  } else if (state.ai.available) {
+    pill.textContent = 'Ollama · no models';
+    pill.classList.add('offline');
+    label.textContent = 'No local models installed';
+  } else {
+    pill.textContent = 'Local AI offline';
+    pill.classList.add('offline');
+    label.textContent = 'Ollama not running';
+  }
+}
+
+async function refreshOllamaStatus({ quiet = false } = {}) {
+  const select = $('ollama-model');
+  const refresh = $('refresh-ollama');
+  if (refresh) {
+    refresh.disabled = true;
+    refresh.textContent = 'Checking…';
+  }
+
+  try {
+    const data = await fetchJSON('/api/ai/status', 'Ollama status');
+    state.ai.available = Boolean(data.available);
+    state.ai.models = Array.isArray(data.models) ? data.models : [];
+    state.ai.error = data.error || null;
+
+    const names = state.ai.models.map((item) => item.name);
+    const preferred = state.ai.preferredModel;
+    const current = state.ai.model;
+    state.ai.model =
+      (preferred && names.includes(preferred) && preferred) ||
+      (current && names.includes(current) && current) ||
+      names[0] ||
+      null;
+
+    if (select) {
+      if (names.length) {
+        select.innerHTML = state.ai.models.map((item) => {
+          const detail = [item.parameter_size, item.quantization].filter(Boolean).join(' · ');
+          return `<option value="${escapeHTML(item.name)}">${escapeHTML(item.name)}${detail ? ` · ${escapeHTML(detail)}` : ''}</option>`;
+        }).join('');
+        select.value = state.ai.model || names[0];
+        select.disabled = false;
+      } else {
+        select.innerHTML = '<option value="">No local Ollama models</option>';
+        select.disabled = true;
+      }
+    }
+
+    saveAISettings();
+    updateAIUI();
+
+    if (!quiet) {
+      if (state.ai.available && state.ai.model) toast(`Ollama ready: ${state.ai.model}`);
+      else if (state.ai.available) toast('Ollama is running, but no local model is installed.');
+      else toast('Ollama is not running. Rook will use its built-in interpreter.');
+    }
+  } catch (error) {
+    state.ai.available = false;
+    state.ai.models = [];
+    state.ai.model = null;
+    state.ai.error = error.message;
+    if (select) {
+      select.innerHTML = '<option value="">Ollama unavailable</option>';
+      select.disabled = true;
+    }
+    updateAIUI();
+    if (!quiet) toast('Could not connect to local Ollama.');
+  } finally {
+    if (refresh) {
+      refresh.disabled = false;
+      refresh.textContent = 'Refresh Ollama';
+    }
+  }
+}
+
+function aiConversationMessages() {
+  const thread = activeThread();
+  if (!thread) return [];
+  return thread.messages.slice(-16).map((message) => ({
+    role: message.role === 'assistant' ? 'assistant' : 'user',
+    content: message.role === 'assistant'
+      ? plainTextFromHTML(message.html || '')
+      : String(message.text || ''),
+  })).filter((message) => message.content.trim());
+}
+
+function aiActionHTML() {
+  const items = [{ label: 'Evidence', action: 'open-lab' }];
+  if (state.context === 'market') items.unshift({ label: 'What-if lab', action: 'open-tool' });
+  if (state.context === 'physics') items.unshift({ label: 'Experiment', action: 'open-tool' });
+  if (state.context === 'discovery') items.unshift({ label: 'Discovery details', action: 'open-tool' });
+  if (state.context === 'validation') items.unshift({ label: 'Inspect seals', action: 'open-tool' });
+  if (state.context === 'custom') items.unshift({ label: state.customData ? 'Analyze another' : 'Upload CSV', action: 'open-tool' });
+  return actions(items);
+}
+
+async function askLocalAI(engineHintHTML) {
+  const extraEvidence = {};
+  if (state.context === 'market' && state.scenario) extraEvidence.scenario = state.scenario;
+
+  const payload = {
+    model: state.ai.model,
+    context: state.context,
+    messages: aiConversationMessages(),
+    engine_hint: plainTextFromHTML(engineHintHTML),
+    extra_evidence: Object.keys(extraEvidence).length ? extraEvidence : null,
+    custom_world: state.context === 'custom' ? state.customData : null,
+    seed: Number($('seed').value || 7),
+    target: $('target').value || 'growth_equity',
+  };
+
+  return postJSON('/api/ai/chat', payload, 'Local Ollama');
 }
 
 function toast(message) {
@@ -296,7 +487,9 @@ function appendMessageNode(message) {
 
   const role = document.createElement('div');
   role.className = 'message-role';
-  role.textContent = message.role === 'assistant' ? 'Rook' : 'You';
+  role.textContent = message.role === 'assistant'
+    ? (message.model ? `Rook · ${message.model}` : 'Rook')
+    : 'You';
   content.appendChild(role);
 
   const p = document.createElement('p');
@@ -831,9 +1024,24 @@ async function askRook(question) {
   resizeComposer();
 
   try {
-    const html = await answerQuestion(clean);
+    const engineHTML = await answerQuestion(clean);
+    let html = engineHTML;
+    let model = null;
+
+    if (state.ai.enabled && state.ai.available && state.ai.model) {
+      try {
+        const local = await askLocalAI(engineHTML);
+        model = local.model || state.ai.model;
+        html = `${renderAIText(local.content)}${aiActionHTML()}<span class="local-ai-note">Reasoned locally with ${escapeHTML(model)} · grounded in Rook engine evidence</span>`;
+      } catch (aiError) {
+        console.warn('Local Ollama fallback:', aiError);
+        toast('Ollama failed for this message. Used Rook’s built-in interpreter instead.');
+        refreshOllamaStatus({ quiet: true });
+      }
+    }
+
     removeThinking();
-    const reply = saveMessage('assistant', { html });
+    const reply = saveMessage('assistant', { html, model });
     appendMessageNode(reply);
     requestAnimationFrame(() => replyNode(reply.id)?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
   } catch (error) {
@@ -1750,6 +1958,21 @@ function bindEvents() {
     if (button) switchContext(button.dataset.context);
   });
 
+  $('ollama-model').addEventListener('change', (event) => {
+    state.ai.model = event.target.value || null;
+    state.ai.preferredModel = state.ai.model;
+    saveAISettings();
+    updateAIUI();
+  });
+
+  $('ollama-enabled').addEventListener('change', (event) => {
+    state.ai.enabled = event.target.checked;
+    saveAISettings();
+    updateAIUI();
+  });
+
+  $('refresh-ollama').addEventListener('click', () => refreshOllamaStatus());
+
   $('more-button').addEventListener('click', (event) => {
     event.stopPropagation();
     const menu = $('settings-menu');
@@ -1827,6 +2050,7 @@ function bindEvents() {
 }
 
 async function init() {
+  loadAISettings();
   loadThreads();
   if (state.threads.length) {
     state.activeThreadId = state.threads[0].id;
@@ -1844,7 +2068,10 @@ async function init() {
   renderConversation();
   bindEvents();
   setComposerReady(state.context === 'custom' && Boolean(state.customData));
-  await runAnalysis();
+  await Promise.all([
+    runAnalysis(),
+    refreshOllamaStatus({ quiet: true }),
+  ]);
   $('ask-input').focus();
 }
 
