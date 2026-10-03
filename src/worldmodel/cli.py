@@ -187,7 +187,7 @@ def main() -> None:
             dataset,
             spec,
             seed=args.seed,
-            code_ref="worldmodel-0.4.0-fred-bootstrap",
+            code_ref="worldmodel-0.5.0-fred-bootstrap",
         ).run()
         if args.report:
             Path(args.report).write_text(
