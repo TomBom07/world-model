@@ -198,6 +198,20 @@ A passing doctor result means the controlled V3, cross-domain physics and V4 res
 
 See [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md).
 
+## Rook 0.7: local Ollama reasoning
+
+Rook can use an Ollama model running on the same computer as its conversational reasoning layer while keeping the scientific engine as the source of truth.
+
+- detects local Ollama at `http://127.0.0.1:11434`
+- lists installed models through Ollama's local model API
+- lets the user choose the model in Rook settings
+- sends the selected model the current Rook evidence plus the deterministic engine interpretation
+- preserves experiment, holdout, falsification, and causal-boundary rules in the system prompt
+- falls back to the built-in structured interpreter if Ollama is unavailable or errors
+- only permits loopback Ollama URLs; set `ROOK_OLLAMA_URL` if a different local loopback port is needed
+
+The local AI layer is intentionally not the authority on scientific claims. It can explain evidence, generate hypotheses, and suggest falsification tests, but Rook's computed evidence remains the grounding layer.
+
 ## Rook 0.6: bring your own world
 
 The browser now has a conversation-first **Your data** flow for numeric CSV files:
