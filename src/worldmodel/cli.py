@@ -33,6 +33,12 @@ def main() -> None:
     )
     breakthrough.add_argument("--seed", type=int, default=7)
 
+    frontier = sub.add_parser(
+        "frontier",
+        help="run the V4 multi-domain frontier falsification suite",
+    )
+    frontier.add_argument("--seed", type=int, default=7)
+
     fred = sub.add_parser(
         "fred-fed",
         help="download FRED series and build a real Fed target-change event CSV",
@@ -76,6 +82,10 @@ def main() -> None:
         from .breakthrough_engine import BreakthroughResearchEngine
 
         result = BreakthroughResearchEngine(seed=args.seed).run()
+    elif args.command == "frontier":
+        from .frontier_engine import FrontierResearchEngine
+
+        result = FrontierResearchEngine(seed=args.seed).run()
     elif args.command == "fred-fed":
         from datetime import date
 
@@ -126,7 +136,7 @@ def main() -> None:
             dataset,
             spec,
             seed=args.seed,
-            code_ref="worldmodel-0.4.0-fred-bootstrap",
+            code_ref="worldmodel-0.5.0-fred-bootstrap",
         ).run()
         if args.report:
             Path(args.report).write_text(
@@ -149,7 +159,10 @@ def main() -> None:
             n=getattr(args, "observations", 360),
             target=getattr(args, "target", "growth_equity"),
         )
+
     print(json.dumps(result, indent=2, default=str))
+    if args.command in {"breakthrough", "frontier"} and not result.get("all_checks_pass", True):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
