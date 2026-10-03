@@ -91,8 +91,27 @@ def status() -> dict[str, Any]:
     }
 
 
+def _json_default(value: Any):
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except Exception:
+            pass
+    if hasattr(value, "tolist"):
+        try:
+            return value.tolist()
+        except Exception:
+            pass
+    return str(value)
+
+
 def _system_prompt(*, context: str, evidence: dict[str, Any], engine_hint: str | None) -> str:
-    serialized = json.dumps(evidence, ensure_ascii=False, separators=(",", ":"))
+    serialized = json.dumps(
+        evidence,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        default=_json_default,
+    )
     hint = (engine_hint or "").strip()
     return f"""You are Rook, a local scientific reasoning copilot running through Ollama.
 
