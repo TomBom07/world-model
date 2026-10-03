@@ -260,12 +260,26 @@ worldmodel demo
 worldmodel strategic
 worldmodel sealed
 worldmodel breakthrough --seed 7
+worldmodel frontier --seed 7
+worldmodel physics --seed 7
 worldmodel fred-fed --output data/fed-target-events.csv --start 1994-01-01
 worldmodel fred-evaluate --input data/fed-target-events.csv --training-end 2019-12-31T23:59:59+00:00 --evaluation-start 2020-01-01T00:00:00+00:00 --evaluation-end 2025-12-31T23:59:59+00:00 --report reports/fed-sealed.json
 worldmodel serve --reload
 ```
 
 Open `http://127.0.0.1:8000`.
+
+### Windows: one-command verified launch
+
+From PowerShell in the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-windows.ps1
+```
+
+The script creates `.venv`, installs the package and development dependencies, runs
+the full pytest suite, runs the V4 frontier falsification suite, verifies the
+cross-domain physics experiment, then launches the local dashboard.
 
 ## Research discipline
 
@@ -276,3 +290,22 @@ The project does **not** claim real-market alpha. No output is investment advice
 The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
 
 See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), [`docs/v3-causal-renormalization.md`](docs/v3-causal-renormalization.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
+
+
+## V4 frontier suite
+
+The integrated V4 surface is available through both CLI and HTTP:
+
+```bash
+worldmodel frontier --seed 7
+```
+
+```text
+GET /api/frontier?seed=7
+GET /api/breakthrough?seed=7
+GET /api/physics?seed=7
+GET /api/health
+```
+
+A failed V3/V4 research gate exits non-zero so CI and local scripts cannot silently
+report a failed falsification suite as success.
