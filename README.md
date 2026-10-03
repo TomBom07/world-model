@@ -48,6 +48,9 @@ V2 adds the infrastructure required before touching real historical outcomes:
 - RMC compared under the same protocol against Ridge, Random Forest, MLP and a local-level state-space baseline
 - MAE, RMSE, directional accuracy, Gaussian log score and interval coverage
 - CSV schema for future real event datasets
+- keyless FRED loader for the first real public-data bootstrap
+- Fed target effective-date event builder using target rates + Nasdaq + 2Y Treasury + broad USD + VIX
+- explicit-cutoff real-data replay command
 
 The included V2 demo still uses **historical-shaped synthetic events**. That is deliberate: the evaluation machinery is being tested before we expose it to real outcomes and create researcher degrees of freedom.
 
@@ -143,6 +146,8 @@ pytest
 worldmodel demo
 worldmodel strategic
 worldmodel sealed
+worldmodel fred-fed --output data/fed-target-events.csv --start 1994-01-01
+worldmodel fred-evaluate --input data/fed-target-events.csv --training-end 2019-12-31T23:59:59+00:00 --evaluation-start 2020-01-01T00:00:00+00:00 --evaluation-end 2025-12-31T23:59:59+00:00 --report reports/fed-sealed.json
 worldmodel serve --reload
 ```
 
@@ -156,4 +161,4 @@ The project does **not** claim real-market alpha. No output is investment advice
 
 The sealed historical protocol is now implemented. The next step is to freeze a real event schema and ingest real earnings / CPI / central-bank / liquidity event windows without changing the evaluation rules after seeing the holdout results.
 
-See [`docs/research-plan.md`](docs/research-plan.md) and [`docs/architecture.md`](docs/architecture.md).
+See [`docs/research-plan.md`](docs/research-plan.md), [`docs/architecture.md`](docs/architecture.md), and [`docs/fred-fed-bootstrap.md`](docs/fred-fed-bootstrap.md).
