@@ -1,7 +1,8 @@
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from worldmodel.fed_target_dataset import build_fed_target_change_dataset
+from worldmodel.event_data import EventDataset
+from worldmodel.fed_target_dataset import FEATURES, OUTCOMES, build_fed_target_change_dataset
 from worldmodel.fred import parse_fred_csv
 
 
@@ -21,7 +22,7 @@ def _csv(series_id, values):
     return "\n".join(lines) + "\n"
 
 
-def test_build_fed_target_change_dataset_from_keyless_fred_shapes():
+def test_build_fed_target_change_dataset_from_keyless_fred_shapes(tmp_path):
     target_upper = [
         ("2020-01-01", 1.75),
         ("2020-01-02", 1.75),
@@ -99,3 +100,14 @@ def test_build_fed_target_change_dataset_from_keyless_fred_shapes():
     assert dataset.records[1].features["policy_delta"] == -0.25
     assert dataset.leakage_violations() == []
     assert all(record.family == "fed_target_change" for record in dataset.records)
+
+    output = tmp_path / "fed-events.csv"
+    dataset.to_csv(output)
+    reloaded = EventDataset.from_csv(
+        output,
+        feature_names=FEATURES,
+        outcome_names=OUTCOMES,
+    )
+    assert len(reloaded.records) == len(dataset.records)
+    assert reloaded.records[0].features == dataset.records[0].features
+    assert reloaded.records[0].outcomes == dataset.records[0].outcomes
