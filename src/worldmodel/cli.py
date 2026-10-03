@@ -54,7 +54,7 @@ def main() -> None:
             n=getattr(args, "observations", 360),
             target=getattr(args, "target", "growth_equity"),
         )
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == "__main__":
