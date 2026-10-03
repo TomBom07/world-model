@@ -63,3 +63,16 @@ def test_custom_world_rejects_too_many_features() -> None:
         assert "at most 8 features" in str(error)
     else:
         raise AssertionError("Expected too-many-features validation failure")
+
+
+def test_custom_world_accepts_decimal_comma_strings() -> None:
+    rows = [[str(i).replace(".", ","), str(3 * i + 2).replace(".", ",")] for i in range(40)]
+    result = analyze_custom_world(
+        columns=["x", "y"],
+        rows=rows,
+        target="y",
+        features=["x"],
+    )
+
+    assert result["dataset"]["rows_used"] == 40
+    assert result["symbolic_model"]["holdout"]["r2"] > 0.99
