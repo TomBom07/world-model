@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0c0f" />
+  <title>Rook Worlds</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b0c0f'/%3E%3Cpath d='M18 17h7v7h7v-7h7v7h7v9l-5 5v10H23V38l-5-5V17Z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/static/worlds.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="rail-head">
+        <a class="brand" href="/">
+          <span class="rook-mark">R</span>
+          <span>Rook</span>
+        </a>
+        <button class="square-button mobile-only" id="close-rail">×</button>
+      </div>
+
+      <button class="new-world" id="new-world">＋ New world</button>
+
+      <div class="rail-section">
+        <div class="rail-label-row">
+          <span>YOUR WORLDS</span>
+          <button id="refresh-worlds" title="Refresh">↻</button>
+        </div>
+        <div id="world-list" class="world-list"></div>
+      </div>
+
+      <div class="rail-bottom">
+        <a class="rail-link" href="/">Research lab</a>
+        <div class="local-status">
+          <span class="dot" id="local-dot"></span>
+          <span id="local-status">Local Rook</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="workspace-top">
+        <div class="top-left">
+          <button class="square-button mobile-only" id="open-rail">☰</button>
+          <div>
+            <p class="eyebrow" id="project-kind">WORLD</p>
+            <h1 id="project-name">Choose a world</h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span class="ai-chip" id="ai-chip">Local AI…</span>
+          <button class="soft-button" id="open-settings">•••</button>
+        </div>
+      </header>
+
+      <nav class="tabs" id="tabs" aria-label="World views">
+        <button data-tab="overview" class="active">Overview</button>
+        <button data-tab="world">World</button>
+        <button data-tab="forecasts">Forecasts</button>
+        <button data-tab="simulate">Simulate</button>
+        <button data-tab="report">Report</button>
+        <button data-tab="business">Business</button>
+        <button data-tab="paper">Paper</button>
+      </nav>
+
+      <section class="content" id="content">
+        <div class="empty-state">
+          <span class="empty-mark">R</span>
+          <h2>Build a living model of something you care about.</h2>
+          <p>Create a world for a company, market, technology, business, research question, or anything else you want to understand over time.</p>
+          <button class="primary-button" id="empty-new-world">Create your first world</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+
+  <dialog id="new-world-dialog">
+    <form method="dialog" class="dialog-card" id="new-world-form">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">NEW WORLD</p>
+          <h2>What do you want Rook to understand?</h2>
+        </div>
+        <button class="square-button" value="cancel">×</button>
+      </div>
+      <label>
+        <span>Name</span>
+        <input id="new-world-name" required maxlength="120" placeholder="AI infrastructure" />
+      </label>
+      <label>
+        <span>Type</span>
+        <select id="new-world-kind">
+          <option value="research">Research</option>
+          <option value="markets">Markets</option>
+          <option value="business">Business</option>
+          <option value="general">General</option>
+        </select>
+      </label>
+      <label>
+        <span>Goal</span>
+        <textarea id="new-world-goal" maxlength="2000" placeholder="Understand what drives this system, what happens next, and what evidence would change the view."></textarea>
+      </label>
+      <button class="primary-button" id="create-world" value="default">Create world</button>
+    </form>
+  </dialog>
+
+  <aside class="settings-sheet" id="settings-sheet">
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow">LOCAL SYSTEM</p>
+        <h2>Rook settings</h2>
+      </div>
+      <button class="square-button" id="close-settings">×</button>
+    </div>
+    <div class="sheet-body">
+      <label>
+        <span>Ollama model</span>
+        <select id="ollama-model"><option value="">Detecting…</option></select>
+      </label>
+      <div class="setting-note" id="ollama-note">Checking local Ollama.</div>
+      <div class="danger-zone">
+        <span>WORLD DATABASE</span>
+        <p>Projects are stored locally in your Rook SQLite database.</p>
+      </div>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/worlds.js"></script>
+</body>
+</html>

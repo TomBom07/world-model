@@ -198,6 +198,33 @@ A passing doctor result means the controlled V3, cross-domain physics and V4 res
 
 See [`docs/v4-frontier-suite.md`](docs/v4-frontier-suite.md).
 
+## Rook 0.8: World OS
+
+Rook now has a persistent product workspace at `/worlds` that turns the research engine into editable, longitudinal Worlds.
+
+A World can store and connect:
+
+- entities and weighted relationships
+- explicit hypotheses / claims with confidence
+- evidence and source notes
+- timestamped binary forecasts with immutable evidence cutoffs
+- forecast outcomes, Brier scores and calibration summaries
+- Monte Carlo structural-sensitivity simulations over the world graph
+- living reports generated from the stored world state
+- optional Ollama-written report narratives grounded in that state
+- business observations and KPI trend summaries
+- guarded paper trades with thesis, falsifier, exposure limits and realized P&L
+
+The local Ollama model can also **build an editable World from a project goal**. It proposes entities, relationships, competing hypotheses and resolvable forecasts; Rook normalizes and stores those proposals rather than leaving them as transient chat text.
+
+Paper trading remains simulated. The current release intentionally does not place live broker orders.
+
+Run Rook and open:
+
+```text
+http://127.0.0.1:8000/worlds
+```
+
 ## Rook 0.7: local Ollama reasoning
 
 Rook can use an Ollama model running on the same computer as its conversational reasoning layer while keeping the scientific engine as the source of truth.

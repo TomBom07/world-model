@@ -15,6 +15,7 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - run: node --check src/worldmodel/static/app.js
+      - run: node --check src/worldmodel/static/worlds.js
       - run: pytest
       - run: worldmodel doctor --seed 7
       - name: V4 frontier robustness seeds

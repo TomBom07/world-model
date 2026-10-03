@@ -20,16 +20,18 @@ from .strategic_engine import StrategicResearchEngine
 from .strategic import ASSETS, EVENTS, MECHANISMS, StrategicMarketSimulator
 from .custom_world import analyze_custom_world
 from .ollama_client import OllamaUnavailable, chat as ollama_chat, status as ollama_status
+from .world_api import router as world_router
 
 
 app = FastAPI(
     title="WorldModel RMC Lab",
-    version="0.7.0",
+    version="0.8.0",
     description="Reflexive Mechanism Compilation, active identification, theory invention and sealed falsification.",
 )
 
 STATIC_DIR = Path(__file__).with_name("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.include_router(world_router)
 
 
 class CustomWorldRequest(BaseModel):
@@ -230,9 +232,14 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/worlds")
+def worlds_workspace() -> FileResponse:
+    return FileResponse(STATIC_DIR / "worlds.html")
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "rmc-v4", "version": "0.7.0"}
+    return {"status": "ok", "engine": "rmc-v4", "version": "0.8.0"}
 
 
 @app.get("/api/demo")
