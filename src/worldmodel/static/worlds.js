@@ -212,7 +212,10 @@ function renderOverview() {
       'LIVING WORLD',
       s.project.name,
       s.project.goal || 'A persistent world model that becomes more useful as evidence, forecasts, and outcomes accumulate.',
-      '<button class="secondary-button" id="overview-refresh">Refresh world</button>'
+      `<div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="secondary-button" id="ai-build-world">${state.ollama.model ? 'Build with local AI' : 'AI builder unavailable'}</button>
+        <button class="secondary-button" id="overview-refresh">Refresh world</button>
+      </div>`
     )}
 
     <div class="grid grid-4">
@@ -258,9 +261,48 @@ function renderOverview() {
   `;
 
   $('overview-refresh')?.addEventListener('click', () => loadSnapshot(state.projectId));
+  $('ai-build-world')?.addEventListener('click', buildWorldWithAI);
   document.querySelectorAll('[data-jump]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.jump));
   });
+}
+
+async function buildWorldWithAI() {
+  if (!state.ollama.model) {
+    toast('Start Ollama or install a local model first.');
+    return;
+  }
+
+  const button = $('ai-build-world');
+  const brief = window.prompt(
+    'Optional: tell Rook what to focus on when building this world.',
+    state.snapshot.project.goal || ''
+  );
+  if (brief == null) return;
+
+  button.disabled = true;
+  button.textContent = 'Building world…';
+
+  try {
+    const result = await api(`/api/worlds/${state.projectId}/ai/build`, {
+      method: 'POST',
+      body: {
+        model: state.ollama.model,
+        brief,
+      },
+    });
+    const counts = result.created || {};
+    toast(
+      `Built ${counts.entities || 0} entities · ${counts.relations || 0} relations · ${counts.claims || 0} claims · ${counts.forecasts || 0} forecasts`
+    );
+    await loadProjects({ preserve: true });
+    setTab('world');
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Build with local AI';
+  }
 }
 
 function renderGraphSVG() {
