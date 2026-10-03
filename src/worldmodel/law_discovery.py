@@ -149,11 +149,15 @@ class JointOntologyLawLearner:
         *,
         complexity_weight: float = 0.015,
         intervention_weight: float = 0.08,
+        omitted_significant_dimension_penalty: float = 0.50,
     ) -> None:
         self.ontology_learner = ontology_learner or InterventionAwareOntologyLearner()
         self.law_compiler = law_compiler or LatentLawCompiler()
         self.complexity_weight = float(complexity_weight)
         self.intervention_weight = float(intervention_weight)
+        self.omitted_significant_dimension_penalty = float(
+            omitted_significant_dimension_penalty
+        )
 
     def fit(
         self,
@@ -165,16 +169,19 @@ class JointOntologyLawLearner:
             interventions = interventions[:, None]
         ontology = self.ontology_learner.fit(x, interventions)
         max_dim = min(ontology.max_dim, max(1, interventions.shape[1]))
+        significant_dim = min(max_dim, max(1, ontology.selected_dim))
         candidates: list[tuple[int, float, LatentLawResult]] = []
 
         for k in range(1, max_dim + 1):
             z = ontology.transform(x, n_components=k)
             law = self.law_compiler.fit(z, controls=interventions)
             signal = float(np.sum(ontology.canonical_correlations[:k] ** 2))
+            omitted_significant = max(0, significant_dim - k)
             objective = (
                 np.log(max(law.mean_validation_mse, 1e-12))
                 + self.complexity_weight * law.total_complexity
                 - self.intervention_weight * signal
+                + self.omitted_significant_dimension_penalty * omitted_significant
             )
             candidates.append((k, float(objective), law))
 
